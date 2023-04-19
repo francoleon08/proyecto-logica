@@ -88,10 +88,10 @@ function Game() {
   function animateEffect(rGrids) {
     setGrid(rGrids[0]);
     const restRGrids = rGrids.slice(1);
-    if (restRGrids.length > 0) {
+    if (restRGrids.length > 0) {      
       setTimeout(() => {
         animateEffect(restRGrids);
-      }, 500);
+      }, 1000);
     } else {
       setWaiting(false);
     }

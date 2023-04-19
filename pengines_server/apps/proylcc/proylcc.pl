@@ -12,8 +12,8 @@
 join(Grid, NumOfColumns, Path, RGrids):-	
 	get_result_path(Grid, NumOfColumns, Path, R),
 	set_path_grid(Grid, NumOfColumns, Path, R, RGridAux),
-	set_zero_grid(Path, NumOfColumns, RGridAux, RGrid),
-	RGrids = [Grid, RGrid].
+	set_zero_grid(Path, NumOfColumns, RGridAux, RGrid, RGridGravity),
+	RGrids = [Grid, RGrid, RGridGravity].
 
 /* ------------------OPERACIONES------------------ */
 
@@ -28,11 +28,35 @@ set_path_grid(Grid, NumOfColumns, Path, Result, RGrid):-
 	function_position_grid(X, Y, NumOfColumns, PosSwap), /* Funcion para calcular la posicion en la grilla */
 	set_result_path(PosSwap, Grid, Result, RGrid). /* Setea el resultado del path en su posicion */
 
-/* Se encarga de poner en 0 los numeros correspondientes */
-set_zero_grid(Path, NumOfColumns, RGrid, RGridResult):-
+/* Se encarga de poner en 0 los numeros correspondientes y reubicarlos*/
+set_zero_grid(Path, NumOfColumns, RGrid, RGridResult, RGridGravity):-
 	get_positions(Path, NumOfColumns, Posiciones), /* Obtengo las posiciones de cada path en la grilla */
-	intercambiar_posiciones(RGrid, Posiciones, RGridResult). /* intercambio cada posicion por un 0 en la grilla */
+	intercambiar_posiciones(RGrid, Posiciones, RGridResult), /*intercambio cada posicion por un 0 en la grilla*/
+	set_gravity(RGrid, NumOfColumns, Posiciones, RGridGravity). /* Grilla con 0s en la parte superior */
 
+/* Dado una grilla con 0s, mueve todas sus apariciones a la parte superior */
+set_gravity(Grid, NumOfColumns, [], Grid).
+set_gravity(Grid, NumOfColumns, [P | Ps], RGrid):-
+	swap_zero_rec(Grid, NumOfColumns, P, Grid_aux),
+	set_gravity(Grid_aux, NumOfColumns, Ps, RGrid).
+	
+
+/* Setea una posicion PosPath en su lugar (efecto gravedad para los 0s) */
+swap_zero_rec(Grid, NumOfColumns, PosPath, Grid):-
+	PosPath < NumOfColumns.
+swap_zero_rec(Grid, NumOfColumns, PosPath, RGrid):-
+	swap_zero(Grid, NumOfColumns, PosPath, RGrid_aux),
+	NewPosPath is (PosPath-NumOfColumns),
+	swap_zero_rec(RGrid_aux, NumOfColumns, NewPosPath, RGrid).
+
+/* Intercambia un elemento (ubicado en PosPath) por su elemento superior */
+swap_zero(Grid, NumOfColumns, PosPath, RGrid):-	
+	PosSwap is (PosPath-NumOfColumns),
+	search_num_on_grid(Grid, PosPath, NumPath),
+	search_num_on_grid(Grid, PosSwap, NumSwap),
+	set_result_path(PosPath, Grid, NumSwap, Grid_aux),
+	set_result_path(PosSwap, Grid_aux, NumPath, RGrid),
+	!.
 
 /* ------------------FUNCIONES------------------ */
 /* Dado una lista de coordenadas, computa las posiciones correspondientes a cada una */
@@ -80,7 +104,7 @@ generate_power_two(Lower, Upper, RandomNumber) :-
 	RandomNumber is 2 ** N. 
 
 /* ------------------FUNCIONES A REFACOTRIZAR------------------ */
-/* Intercambia un elemento por NuecoElemento en una posicion P de una Lista  ====> ¡Refactorizar! */
+/* Intercambia un elemento por NuevoElemento en una posicion P de una Lista  ====> ¡Refactorizar! */
 set_result_path(P, Lista, NuevoElemento, NuevaLista) :-
 	intercambiar_elemento_rec(P, Lista, NuevoElemento, NuevaLista, []).
 	
