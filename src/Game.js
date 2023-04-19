@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import PengineClient from './PengineClient';
 import Board from './Board';
 import { joinResult } from './util';
+import { numberToColor } from './util';
 
 let pengine;
 
@@ -11,6 +12,7 @@ function Game() {
   const [grid, setGrid] = useState(null);
   const [numOfColumns, setNumOfColumns] = useState(null);
   const [score, setScore] = useState(0);
+  const [value, setValue] = useState(0);
   const [path, setPath] = useState([]);
   const [waiting, setWaiting] = useState(false);
 
@@ -42,7 +44,27 @@ function Game() {
       return;
     }
     setPath(newPath);
-    console.log(JSON.stringify(newPath));
+
+    let path = "[";
+    for (let index = 0; index < newPath.length; index++) {
+      
+      path += "["+newPath[index]+"]";
+      if(index < newPath.length-1)
+        path += ",";
+    }
+    path += "]";
+    
+    const gridS = JSON.stringify(grid);
+    const queryS = "get_result_path(" + gridS + "," + numOfColumns + "," + path + ", Result)";    
+    pengine.query(queryS, (success, response) => {
+      if (success) {
+        const res = response['Result'];
+        setValue(res);
+      } else {
+        setWaiting(false);
+      }
+    });
+
   }
 
   /**
@@ -75,6 +97,7 @@ function Game() {
         setScore(score + joinResult(path, grid, numOfColumns));
         setPath([]);
         animateEffect(response['RGrids']);
+        setValue(0);
       } else {
         setWaiting(false);
       }
@@ -103,7 +126,14 @@ function Game() {
   return (
     <div className="game">
       <div className="header">
+        <div className='scoreTitle'>Puntaje: </div>
         <div className="score">{score}</div>
+        <div 
+          className="value" 
+          style={value === 0 ? undefined : { backgroundColor: numberToColor(value) }}
+        >
+          {value}
+        </div>
       </div>
       <Board
         grid={grid}
