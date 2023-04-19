@@ -11,9 +11,11 @@
  */ 
 join(Grid, NumOfColumns, Path, RGrids):-	
 	get_result_path(Grid, NumOfColumns, Path, R),
-	set_path_grid(Grid, NumOfColumns, Path, R, RGridAux),
-	set_zero_grid(Path, NumOfColumns, RGridAux, RGrid, RGridGravity),
-	RGrids = [Grid, RGrid, RGridGravity].
+	set_path_grid(Grid, NumOfColumns, Path, R, RGridResult),
+	set_zero_grid(Path, NumOfColumns, RGridResult, RGrid, RGridGravity),
+	%get_rango(Grid, Low, High),
+	generate_numbers_random(RGridGravity, 1, 10, RGridFinish),
+	RGrids = [Grid, RGridResult, RGrid, RGridGravity, RGridFinish].
 
 /* ------------------OPERACIONES------------------ */
 
@@ -25,21 +27,24 @@ get_result_path(Grid, NumOfColumns, Path, Result):-
 /* Se encarga de buscar la ultima posicion del camino y setear el resultado */
 set_path_grid(Grid, NumOfColumns, Path, Result, RGrid):-
 	last_position(Path, [X | Y]), /* Busco la ultima posicion para setear el resultado */
-	function_position_grid(X, Y, NumOfColumns, PosSwap), /* Funcion para calcular la posicion en la grilla */
-	set_result_path(PosSwap, Grid, Result, RGrid). /* Setea el resultado del path en su posicion */
+	function_position_grid(X, Y, NumOfColumns, PosSet), /* Funcion para calcular la posicion en la grilla */
+	set_result_path(PosSet, Grid, Result, RGrid). /* Setea el resultado del path en su posicion */
 
 /* Se encarga de poner en 0 los numeros correspondientes y reubicarlos*/
 set_zero_grid(Path, NumOfColumns, RGrid, RGridResult, RGridGravity):-
 	get_positions(Path, NumOfColumns, Posiciones), /* Obtengo las posiciones de cada path en la grilla */
 	intercambiar_posiciones(RGrid, Posiciones, RGridResult), /*intercambio cada posicion por un 0 en la grilla*/
-	set_gravity(RGrid, NumOfColumns, Posiciones, RGridGravity). /* Grilla con 0s en la parte superior */
+	quicksort(Posiciones, PosicionesOrdenadas),
+	set_gravity(RGridResult, NumOfColumns, PosicionesOrdenadas, RGridGravity).
 
 /* Dado una grilla con 0s, mueve todas sus apariciones a la parte superior */
 set_gravity(Grid, NumOfColumns, [], Grid).
+set_gravity(Grid, NumOfColumns, [P], RGrid):-
+	swap_zero_rec(Grid, NumOfColumns, P, RGrid).
 set_gravity(Grid, NumOfColumns, [P | Ps], RGrid):-
 	swap_zero_rec(Grid, NumOfColumns, P, Grid_aux),
-	set_gravity(Grid_aux, NumOfColumns, Ps, RGrid).
-	
+	set_gravity(Grid_aux, NumOfColumns, Ps, RGrid),
+	!.
 
 /* Setea una posicion PosPath en su lugar (efecto gravedad para los 0s) */
 swap_zero_rec(Grid, NumOfColumns, PosPath, Grid):-
@@ -57,6 +62,33 @@ swap_zero(Grid, NumOfColumns, PosPath, RGrid):-
 	set_result_path(PosPath, Grid, NumSwap, Grid_aux),
 	set_result_path(PosSwap, Grid_aux, NumPath, RGrid),
 	!.
+
+get_rango(Grid, Low, High):-
+	max_number(Grid, Max),
+	High is round(sqrt(Max)),
+	get_rango_low(High, Low),
+	!.
+
+get_rango_low(High, 1).	
+get_rango_low(High, Low):-
+	High > 7,
+	Low is (High-6).
+
+max_number([X], X).
+max_number([X|Xs], Max) :-
+    max_number(Xs, MaxResto),
+    (X > MaxResto
+    -> Max is X
+    ;  Max is MaxResto
+    ).
+
+/* Genera una grilla con numeros random */
+generate_numbers_random([], _, _, []).
+generate_numbers_random([0 | Gs], Low, High, [R | Rs]):-
+	generate_power_two(Low,High,R),
+	generate_numbers_random(Gs, Low, High, Rs).
+generate_numbers_random([G | Gs], Low, High, [G | Rs]):-
+	generate_numbers_random(Gs, Low, High, Rs).
 
 /* ------------------FUNCIONES------------------ */
 /* Dado una lista de coordenadas, computa las posiciones correspondientes a cada una */
@@ -136,16 +168,23 @@ swap(List, Pos1, Pos2, Result) :-
 	nth0(Pos1, Temp2, Elem2, Temp3),
 	nth0(Pos2, Temp3, Elem1, Result).
 
+% Caso base: una lista vacía está ordenada
+quicksort([], []).
 
+% Caso recursivo: ordenar la lista
+quicksort([Pivot | Resto], Sorted) :-
+    partition(Pivot, Resto, Menores, Mayores),
+    quicksort(Menores, MenoresOrdenados),
+    quicksort(Mayores, MayoresOrdenados),
+    append(MenoresOrdenados, [Pivot | MayoresOrdenados], Sorted).
 
-/* ------------------CODIGO COMENTADO------------------ */
-%JOIN
-%calculate_sum_path(Grid, NumOfColumns, Path, R), /* Calcula la suma total del recorrido */
-	%pow_two(R, Result), /* Computa el resultado correcto */
+% Predicado auxiliar para particionar la lista en menores y mayores
+partition(_, [], [], []).
 
-	%last_position(Path, [X | Y]), /* Busco la ultima posicion para setear el resultado */
-	%function_position_grid(X, Y, NumOfColumns, PosSwap), /* Funcion para calcular la posicion en la grilla */
-	%set_result_path(PosSwap, Grid, Result, RGridAux), /* Setea el resultado del path en su posicion */
+partition(Pivot, [X | Resto], [X | Menores], Mayores) :-
+    X =< Pivot,
+    partition(Pivot, Resto, Menores, Mayores).
 
-	%get_positions(Path, NumOfColumns, Posiciones), /* Obtengo las posiciones de cada path en la grilla */
-	%intercambiar_posiciones(RGridAux, Posiciones, RGrid), /* intercambio cada posicion por un 0 en la grilla */
+partition(Pivot, [X | Resto], Menores, [X | Mayores]) :-
+    X > Pivot,
+    partition(Pivot, Resto, Menores, Mayores).

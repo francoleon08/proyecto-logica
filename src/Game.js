@@ -44,27 +44,27 @@ function Game() {
       return;
     }
     setPath(newPath);
-
-    let path = "[";
-    for (let index = 0; index < newPath.length; index++) {
-      
-      path += "["+newPath[index]+"]";
-      if(index < newPath.length-1)
-        path += ",";
-    }
-    path += "]";
-    
-    const gridS = JSON.stringify(grid);
-    const queryS = "get_result_path(" + gridS + "," + numOfColumns + "," + path + ", Result)";    
-    pengine.query(queryS, (success, response) => {
-      if (success) {
-        const res = response['Result'];
-        setValue(res);
-      } else {
-        setWaiting(false);
+    if(newPath.length > 0) {
+      let path = "[";
+      for (let index = 0; index < newPath.length; index++) {
+        
+        path += "["+newPath[index]+"]";
+        if(index < newPath.length-1)
+          path += ",";
       }
-    });
-
+      path += "]";
+      
+      const gridS = JSON.stringify(grid);
+      const queryS = "get_result_path(" + gridS + "," + numOfColumns + "," + path + ", Result)";    
+      pengine.query(queryS, (success, response) => {
+        if (success) {
+          const res = response['Result'];
+          setValue(res);
+        } else {
+          setWaiting(false);
+        }
+      });   
+    }
   }
 
   /**
@@ -114,7 +114,7 @@ function Game() {
     if (restRGrids.length > 0) {      
       setTimeout(() => {
         animateEffect(restRGrids);
-      }, 1000);
+      }, 700);
     } else {
       setWaiting(false);
     }
