@@ -13,7 +13,7 @@ join(Grid, NumOfColumns, Path, RGrids):-
 	get_result_path(Grid, NumOfColumns, Path, R),
 	set_path_grid(Grid, NumOfColumns, Path, R, RGridResult),
 	set_zero_grid(Path, NumOfColumns, RGridResult, RGrid, RGridGravity),
-	%get_rango(Grid, Low, High),
+	%get_range(Grid, Low, High),
 	generate_numbers_random(RGridGravity, 1, 10, RGridFinish),
 	RGrids = [Grid, RGridResult, RGrid, RGridGravity, RGridFinish].
 
@@ -26,36 +26,36 @@ get_result_path(Grid, NumOfColumns, Path, Result):-
 
 /* Se encarga de buscar la ultima posicion del camino y setear el resultado */
 set_path_grid(Grid, NumOfColumns, Path, Result, RGrid):-
-	last_position(Path, [X | Y]), /* Busco la ultima posicion para setear el resultado */
+	last_position_path(Path, [X | Y]), /* Busco la ultima posicion para setear el resultado */
 	function_position_grid(X, Y, NumOfColumns, PosSet), /* Funcion para calcular la posicion en la grilla */
 	set_result_path(PosSet, Grid, Result, RGrid). /* Setea el resultado del path en su posicion */
 
 /* Se encarga de poner en 0 los numeros correspondientes y reubicarlos*/
 set_zero_grid(Path, NumOfColumns, RGrid, RGridResult, RGridGravity):-
-	get_positions(Path, NumOfColumns, Posiciones), /* Obtengo las posiciones de cada path en la grilla */
-	intercambiar_posiciones(RGrid, Posiciones, RGridResult), /*intercambio cada posicion por un 0 en la grilla*/
+	get_positions_path(Path, NumOfColumns, Posiciones), /* Obtengo las posiciones de cada path en la grilla */
+	swap_positions(RGrid, Posiciones, RGridResult), /*intercambio cada posicion por un 0 en la grilla*/
 	quicksort(Posiciones, PosicionesOrdenadas),
 	set_gravity(RGridResult, NumOfColumns, PosicionesOrdenadas, RGridGravity).
 
 /* Dado una grilla con 0s, mueve todas sus apariciones a la parte superior */
-set_gravity(Grid, NumOfColumns, [], Grid).
+set_gravity(Grid, _, [], Grid).
 set_gravity(Grid, NumOfColumns, [P], RGrid):-
-	swap_zero_rec(Grid, NumOfColumns, P, RGrid).
+	swap_zero_for_top_rec(Grid, NumOfColumns, P, RGrid).
 set_gravity(Grid, NumOfColumns, [P | Ps], RGrid):-
-	swap_zero_rec(Grid, NumOfColumns, P, Grid_aux),
+	swap_zero_for_top_rec(Grid, NumOfColumns, P, Grid_aux),
 	set_gravity(Grid_aux, NumOfColumns, Ps, RGrid),
 	!.
 
 /* Setea una posicion PosPath en su lugar (efecto gravedad para los 0s) */
-swap_zero_rec(Grid, NumOfColumns, PosPath, Grid):-
+swap_zero_for_top_rec(Grid, NumOfColumns, PosPath, Grid):-
 	PosPath < NumOfColumns.
-swap_zero_rec(Grid, NumOfColumns, PosPath, RGrid):-
-	swap_zero(Grid, NumOfColumns, PosPath, RGrid_aux),
+swap_zero_for_top_rec(Grid, NumOfColumns, PosPath, RGrid):-
+	swap_zero_for_top(Grid, NumOfColumns, PosPath, RGrid_aux),
 	NewPosPath is (PosPath-NumOfColumns),
-	swap_zero_rec(RGrid_aux, NumOfColumns, NewPosPath, RGrid).
+	swap_zero_for_top_rec(RGrid_aux, NumOfColumns, NewPosPath, RGrid).
 
 /* Intercambia un elemento (ubicado en PosPath) por su elemento superior */
-swap_zero(Grid, NumOfColumns, PosPath, RGrid):-	
+swap_zero_for_top(Grid, NumOfColumns, PosPath, RGrid):-	
 	PosSwap is (PosPath-NumOfColumns),
 	search_num_on_grid(Grid, PosPath, NumPath),
 	search_num_on_grid(Grid, PosSwap, NumSwap),
@@ -63,26 +63,26 @@ swap_zero(Grid, NumOfColumns, PosPath, RGrid):-
 	set_result_path(PosSwap, Grid_aux, NumPath, RGrid),
 	!.
 
-get_rango(Grid, Low, High):-
-	max_number(Grid, Max),
+get_range(Grid, Low, High):-
+	max_number_grid(Grid, Max),
 	High is round(sqrt(Max)),
-	get_rango_low(High, Low),
+	get_range_low(High, Low),
 	!.
 
-get_rango_low(High, 1).	
-get_rango_low(High, Low):-
+get_range_low(_, 1).	
+get_range_low(High, Low):-
 	High > 7,
 	Low is (High-6).
 
-max_number([X], X).
-max_number([X|Xs], Max) :-
-    max_number(Xs, MaxResto),
+max_number_grid([X], X).
+max_number_grid([X|Xs], Max) :-
+    max_number_grid(Xs, MaxResto),
     (X > MaxResto
     -> Max is X
     ;  Max is MaxResto
     ).
 
-/* Genera una grilla con numeros random */
+/* Genera una grilla con numeros pseudo aleatorios */
 generate_numbers_random([], _, _, []).
 generate_numbers_random([0 | Gs], Low, High, [R | Rs]):-
 	generate_power_two(Low,High,R),
@@ -92,19 +92,19 @@ generate_numbers_random([G | Gs], Low, High, [G | Rs]):-
 
 /* ------------------FUNCIONES------------------ */
 /* Dado una lista de coordenadas, computa las posiciones correspondientes a cada una */
-get_positions([Ps], _, []).
-get_positions([[X, Y] | Ps], NumOfColumns, [L | Ls]):-
+get_positions_path([_], _, []).
+get_positions_path([[X, Y] | Ps], NumOfColumns, [L | Ls]):-
 	function_position_grid(X, Y, NumOfColumns, L),
-	get_positions(Ps, NumOfColumns, Ls).
+	get_positions_path(Ps, NumOfColumns, Ls).
 
 /* Dado una lista, retorna el ultimo elemento */
-last_position([Ps], Ps).
-last_position([P | Ps], Pos):-
-	last_position(Ps, Pos),
+last_position_path([Ps], Ps).
+last_position_path([_ | Ps], Pos):-
+	last_position_path(Ps, Pos),
 	!.
 
 /* Computa la suma de un Path dado */
-calculate_sum_path(Grid, NumOfColumns, [], 0).
+calculate_sum_path(_, _, [], 0).
 calculate_sum_path(Grid, NumOfColumns, [[X | Y] | Ps], R):-
 	function_position_grid(X, Y, NumOfColumns, Pos),
 	search_num_on_grid(Grid, Pos, N),
@@ -136,30 +136,30 @@ generate_power_two(Lower, Upper, RandomNumber) :-
 	RandomNumber is 2 ** N. 
 
 /* ------------------FUNCIONES A REFACOTRIZAR------------------ */
-/* Intercambia un elemento por NuevoElemento en una posicion P de una Lista  ====> ¡Refactorizar! */
-set_result_path(P, Lista, NuevoElemento, NuevaLista) :-
-	intercambiar_elemento_rec(P, Lista, NuevoElemento, NuevaLista, []).
+/* Intercambia un elemento por un elemento E en una posicion P de una Lista  ====> ¡Refactorizar! */
+set_result_path(P, Grid, E, RGrid) :-
+	swap_element_rec(P, Grid, E, RGrid, []).
 	
-intercambiar_elemento_rec(0, [_ | Resto], NuevoElemento, [NuevoElemento | Resto], _).
-intercambiar_elemento_rec(P, [Cabeza | Resto], NuevoElemento, [Cabeza | NuevaResto], Acumulador) :-
+swap_element_rec(0, [_ | Gs], E, [E | Gs], _).
+swap_element_rec(P, [G | Gs], E, [G | Rs], S) :-
 	P > 0,
-	Siguiente is P - 1,
-	intercambiar_elemento_rec(Siguiente, Resto, NuevoElemento, NuevaResto, [Cabeza | Acumulador]).
+	Next is P - 1,
+	swap_element_rec(Next, Gs, E,Rs, [G | S]).
 	
 /* Intercambia las posiciones elegidas por 0 ===> ¡Refactorizar! */
-intercambiar_posiciones(Lista, Posiciones, NuevaLista) :-
-	intercambiar_posiciones_aux(Lista, Posiciones, NuevaLista, 0).
+swap_positions(Grid, Positions, RGrid) :-
+	swap_positions_rec(Grid, Positions, RGrid, 0).
 	
-intercambiar_posiciones_aux([], _, [], _).
-intercambiar_posiciones_aux([Cabeza | Resto], Posiciones, [NuevoCabeza | NuevaResto], Indice) :-
-	member(Indice, Posiciones),
-	NuevoCabeza is 0,
-	SiguienteIndice is Indice + 1,
-	intercambiar_posiciones_aux(Resto, Posiciones, NuevaResto, SiguienteIndice).
-intercambiar_posiciones_aux([Cabeza | Resto], Posiciones, [Cabeza | NuevaResto], Indice) :-
-	\+ member(Indice, Posiciones),
-	SiguienteIndice is Indice + 1,
-	intercambiar_posiciones_aux(Resto, Posiciones, NuevaResto, SiguienteIndice).
+swap_positions_rec([], _, [], _).
+swap_positions_rec([_ | Gs], Positions, [R | Rs], Index) :-
+	member(Index, Positions),
+	R is 0,
+	NextIndex is Index + 1,
+	swap_positions_rec(Gs, Positions, Rs, NextIndex).
+swap_positions_rec([G | Gs], Positions, [G | Rs], Index) :-
+	\+ member(Index, Positions),
+	NextIndex is Index + 1,
+	swap_positions_rec(Gs, Positions, Rs, NextIndex).
 
 /* Intercambia dos elementos en una lista */
 swap(List, Pos1, Pos2, Result) :-
@@ -172,8 +172,8 @@ swap(List, Pos1, Pos2, Result) :-
 quicksort([], []).
 
 % Caso recursivo: ordenar la lista
-quicksort([Pivot | Resto], Sorted) :-
-    partition(Pivot, Resto, Menores, Mayores),
+quicksort([Pivot | Gs], Sorted) :-
+    partition(Pivot, Gs, Menores, Mayores),
     quicksort(Menores, MenoresOrdenados),
     quicksort(Mayores, MayoresOrdenados),
     append(MenoresOrdenados, [Pivot | MayoresOrdenados], Sorted).
@@ -181,10 +181,10 @@ quicksort([Pivot | Resto], Sorted) :-
 % Predicado auxiliar para particionar la lista en menores y mayores
 partition(_, [], [], []).
 
-partition(Pivot, [X | Resto], [X | Menores], Mayores) :-
+partition(Pivot, [X | Gs], [X | Menores], Mayores) :-
     X =< Pivot,
-    partition(Pivot, Resto, Menores, Mayores).
+    partition(Pivot, Gs, Menores, Mayores).
 
-partition(Pivot, [X | Resto], Menores, [X | Mayores]) :-
+partition(Pivot, [X | Gs], Menores, [X | Mayores]) :-
     X > Pivot,
-    partition(Pivot, Resto, Menores, Mayores).
+    partition(Pivot, Gs, Menores, Mayores).
