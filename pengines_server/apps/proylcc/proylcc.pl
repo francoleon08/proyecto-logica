@@ -38,7 +38,7 @@ join(Grid, NumOfColumns, Path, RGrids):-
 	set_zero_grid(Path, NumOfColumns, RGridResult, RGrid, RGridGravity),
 	%get_range(Grid, Low, High),
 	generate_numbers_random(RGridGravity, 1, 10, RGridFinish),
-	RGrids = [Grid, RGridResult, RGrid].
+	RGrids = [Grid, RGridResult, RGrid, RGridGravity, RGridFinish].
 
 /* ------------------OPERACIONES------------------ */
 
