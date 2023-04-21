@@ -28,6 +28,8 @@
 
 
 /**
+ * top down - hablando en general y luego ir desglozando. 
+ * Booster 
  * join(+Grid, +NumOfColumns, +Path, -RGrids) 
  * RGrids es la lista de grillas representando el efecto, en etapas, de combinar las celdas del camino Path
  * en la grilla Grid, con número de columnas NumOfColumns. El número 0 representa que la celda está vacía. 
@@ -211,3 +213,38 @@ partition(Pivot, [X | Gs], [X | Menores], Mayores) :-
 partition(Pivot, [X | Gs], Menores, [X | Mayores]) :-
     X > Pivot,
     partition(Pivot, Gs, Menores, Mayores).
+
+/* ------------------FUNCIONES BOOSTER COLAPSER------------------ */
+booster_colapser(Grid, RGrids):-
+	
+
+
+is_adyacent(P, P).
+
+%Movimientos posibles dependiendo la posicion  
+move_1(Grid, NumOfColumns, Pos, RGrid).  %derecha
+move_2(). %abajo izq
+move_3(). %abajo 
+move_4(). %abajo derecha
+
+% 3 Casos, posisiciones multiplos de 5, (posiciones + 1 multiplo) de 5, resto.
+case_1(Grid, NumOfColumns, Pos, RGrid):- %izquiera
+	Pos mod NumOfColumns =:= 0,
+	move_1(),
+	move_3(),
+	move_4().
+
+case_2(Grid, NumOfColumns, Pos, RGrid):- % derecha
+	(Pos+1) mod NumOfColumns =:= 0,
+	move_2(),
+	move_3().
+
+case_3(Grid, NumOfColumns, Pos, RGrid):- %centro
+	move_1(),
+	move_2(),
+	move_3(),
+	move_4().
+
+
+  
+
