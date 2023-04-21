@@ -114,6 +114,13 @@ function Game() {
     }
   }
 
+  /*
+    Called when Booster Collapser is executed
+   */
+    function onClickBooster() {
+      console.log(grid)
+    }
+
   /**
    * Displays each grid of the sequence as the current grid in 1sec intervals.
    * @param {number[][]} rGrids a sequence of grids.
@@ -130,6 +137,7 @@ function Game() {
     }
   }
 
+
   if (grid === null) {
     return null;
   }
@@ -143,6 +151,11 @@ function Game() {
           style={value === 0 ? undefined : { backgroundColor: numberToColor(value) }}
         >
           {value}
+        </div>
+        <div 
+          className="booster" 
+          onClick={onClickBooster}
+        >Booster Colapser
         </div>
       </div>
       <Board

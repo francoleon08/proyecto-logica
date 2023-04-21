@@ -20,7 +20,8 @@ body {
 
 .scoreTitle,
 .score,
-.value {
+.value,
+.booster {
   margin: 10px;
   font-size: 25px;
   color: white;
@@ -34,6 +35,22 @@ body {
   font-family: Arial, Helvetica, sans-serif;
   padding: 10px 15px;
 }
+
+.booster {
+  border: 1px solid;
+  border-radius: 5px;
+  padding: 10px 15px;
+}
+
+.booster:hover {
+  background-color: #070A52;
+  color: yellow;
+  transition: .5s;
+  cursor: pointer;  
+  transform: scale(105%);
+}
+
+
 
 .board {
   margin: 20px;
