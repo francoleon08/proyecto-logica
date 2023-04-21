@@ -1,6 +1,29 @@
 :- module(proylcc, 
 	[  
-		join/4
+		join/4,
+		get_result_path/4,
+		set_path_grid/5,
+		set_gravity/4,
+		swap_zero_for_top_rec/4,
+		swap_zero_for_top/4,
+		get_range/3,
+		get_range_low/2,
+		max_number_grid/2,
+		generate_numbers_random/4,
+		get_positions_path/3,
+		last_position_path/2,
+		calculate_sum_path/4,
+		pow_two/2,
+		search_num_on_grid/3,
+		function_position_grid/4,
+		generate_power_two/3,
+		set_result_path/4,
+		swap_element_rec/5,
+		swap_positions/3,
+		swap_positions_rec/4,
+		swap/4,
+		quicksort/2,
+		partition/4
 	]).
 
 
@@ -129,7 +152,7 @@ search_num_on_grid([_ | Gs], Pos, N):-
 function_position_grid(X, Y, Columns, N):-
 	N is (X*Columns + Y).
 
-/* Genera un numero aleatorio 2^N, N perteneciente a (Lower , Upper). Lower > 0 */
+/* Genera un numero aleatorio 2^N, N perteneciente a [Lower , Upper). Lower > 0 */
 /* 2^10 = 1024 */
 generate_power_two(Lower, Upper, RandomNumber) :-
 	random(Lower, Upper, N),
