@@ -23,7 +23,8 @@
 		swap_positions_rec/4,
 		swap/4,
 		quicksort/2,
-		partition/4
+		partition/4,
+		booster_colapser/3
 	]).
 
 
@@ -160,6 +161,15 @@ generate_power_two(Lower, Upper, RandomNumber) :-
 	random(Lower, Upper, N),
 	RandomNumber is 2 ** N. 
 
+/* Dado una lista L, agrega el elemento E al final de L */
+add_last(E ,L, R):-
+	concat(L, [E], R).
+
+/* Concatena dos listas */		
+concat([], Xs, Xs).
+concat([X | Xs], Ys, [X | Zs]):-
+	concat(Xs, Ys, Zs).
+
 /* ------------------FUNCIONES A REFACOTRIZAR------------------ */
 /* Intercambia un elemento por un elemento E en una posicion P de una Lista  ====> ¡Refactorizar! */
 set_result_path(P, Grid, E, RGrid) :-
@@ -215,36 +225,178 @@ partition(Pivot, [X | Gs], Menores, [X | Mayores]) :-
     partition(Pivot, Gs, Menores, Mayores).
 
 /* ------------------FUNCIONES BOOSTER COLAPSER------------------ */
-booster_colapser(Grid, RGrids):-
-	
+booster_colapser(Grid, NumOfColumns, RGrids):-
+	get_grupos_elem_adyacents(Grid, NumOfColumns, Result),
+	get_paths(Result, RGrids_All_Paths),
+	concatenate_paths(RGrids_All_Paths, Pahts_concatenate),
+	set_paths_zero_result(Grid, NumOfColumns, Pahts_concatenate, RGrids_zeros),
+	last(RGrids_zeros, Grid_gravity_aux),
+	get_positions_zeros(Grid_gravity_aux, 0, Positions_Zeros),
+	set_gravity(Grid_gravity_aux, NumOfColumns, Positions_Zeros, Grid_Gravity),
+	generate_numbers_random(Grid_Gravity, 1, 10, Grid_Finish),
+	add_last(Grid_Gravity, RGrids_zeros, RGrids_aux),
+	add_last(Grid_Finish, RGrids_aux, RGrids),
+	!.
+
+/* Dado una grilla, retorna las posiciones donde hay ceros */
+get_positions_zeros([], _, []).
+get_positions_zeros([0 | Gs], Index, [Index | Ps]):-
+	NewIndex is (Index + 1),
+	get_positions_zeros(Gs, NewIndex, Ps).
+get_positions_zeros([_ | Gs], Index, Positions):-
+	NewIndex is (Index + 1),
+	get_positions_zeros(Gs, NewIndex, Positions).
+
+/* 
+	Setea el resultado de los camions en la grilla, eliminando los caminos mencionados
+	Retorna una lista de Grillas, cada una correspondiente a la eliminacion de un camino
+ */
+set_paths_zero_result(_, _, [], []).
+set_paths_zero_result(Grid, NumOfColumns, [P | Ps], [G | Gs]):-
+	sort(P, P_ordered),
+	nth0(0, P_ordered, Elem),
+	nth0(Elem, Grid, N_aux),
+	length(P_ordered, Size),
+	N is (N_aux*Size),
+	pow_two(N, Sum),
+	last(P_ordered, Position_replace),
+	replace(Grid, Position_replace, Sum, Grid_aux),
+	set_zero_grid_positions(Grid_aux, P_ordered, G),
+	set_paths_zero_result(G, NumOfColumns, Ps, Gs),
+	!.
+set_paths_zero_result(Grid, NumOfColumns, [_ | Ps], RGrids):-
+	set_paths_zero_result(Grid, NumOfColumns, Ps, RGrids),
+	!.
+
+/* Dado una grilla, pone en 0 las posiciones recibidas */
+set_zero_grid_positions(Grid, [_], Grid).
+set_zero_grid_positions(Grid, [P | Ps], RGrid):-
+	replace(Grid, P, 0, Grid_aux),
+	set_zero_grid_positions(Grid_aux, Ps, RGrid).
+
+/* Remplaza una elemento X en una lista en una posicion I */
+replace([_|T], 0, X, [X|T]).
+replace([H|T], I, X, [H|R]):-
+    I > 0,
+    NI is I-1,
+    replace(T, NI, X, R).
+
+/* Dado una lista de caminos, concatena aquellos que compartan elementos */
+concatenate_paths([], []).
+concatenate_paths([G | Gs], [R | Rs]):-
+    concatenate(Gs, G, R, List_aux),
+    concatenate_paths(List_aux, Rs).
+
+concatenate([], List, List, []).
+concatenate([G | Gs], List, R, List_aux):-
+    comparten_elementos(G, List),
+    unir_y_eliminar_repetidos([G, List], NewList),
+    concatenate(Gs, NewList, R, List_aux),
+    !.
+concatenate([G | Gs], List, R, [G | Ts]):-
+    concatenate(Gs, List, R, Ts),
+    !.
+
+comparten_elementos(List1, List2):-
+	member(E, List1),
+	member(E, List2),
+	!.
+
+get_paths([], []).
+get_paths([P | Ps], [R | Rs]):-
+	unir_y_eliminar_repetidos(P, R),
+	get_paths(Ps, Rs).
+
+unir_y_eliminar_repetidos(ListaDeListas, Resultado) :-
+	append(ListaDeListas, Lista),
+	list_to_set(Lista, Resultado).
+
+/* 
+	Dado una grilla, retorna un Lista con la lista de caminos adyacentes,
+	cada grupo de caminos correspondiente a un numero.
+*/
+get_grupos_elem_adyacents(Grid, NumOfColumns, RGrids):-
+	grupos(Grid, NumOfColumns, 0, RGrids_aux),
+	refactor_grid_adyacents(RGrids_aux, RGrids),
+	!.
+
+/* Elimina las listas vacias dentro de una grilla de listas */
+refactor_grid_adyacents([], []).
+refactor_grid_adyacents([[] | Gs], R):-
+	refactor_grid_adyacents(Gs, R).
+refactor_grid_adyacents([G | Gs], [G | Rs]):-
+	refactor_grid_adyacents(Gs, Rs).
+
+/* 
+	Dado una lista de posiciones, genera los caminos correspondientes (Lista de caminos)
+ */
+grupos([], _, _, []).
+grupos([G | Gs], NumOfColumns, Index, [GridGroup | RGrids]):-
+	get_positions_grid_elem([G | Gs], G, Index, Positions),
+	NewIndex is (Index + 1),
+	Positions = [P | _],
+	get_grupos(P, Positions, NumOfColumns, GridGroup),
+	grupos(Gs, NumOfColumns, NewIndex, RGrids),
+	!.
+grupos([_ | Gs], NumOfColumns, Index, RGrids):-
+	NewIndex is (Index + 1),
+	grupos(Gs, NumOfColumns, NewIndex, RGrids),
+	!.
+
+/* Genera una lista de caminos posibles de tamaño 2 */
+get_grupos(_, [], _, []).
+get_grupos(Pos, [P | Ps], NumOfColumns, [[Pos,P] | Ls]):-
+	is_adyacent(Pos, P, NumOfColumns),
+	get_grupos(Pos, Ps, NumOfColumns, Ls).
+get_grupos(Pos, [_ | Ps], NumOfColumns, ListGroupAdyacents):-
+	get_grupos(Pos, Ps, NumOfColumns, ListGroupAdyacents).
 
 
-is_adyacent(P, P).
+/* Retorna las posiciones de un elemento Elem en la grilla */
+get_positions_grid_elem([], _, _, []).
+get_positions_grid_elem([Elem | Gs], Elem, Index, [Index | Ps]):-
+	NewIndex is (Index + 1),
+	get_positions_grid_elem(Gs, Elem, NewIndex, Ps).
+get_positions_grid_elem([_ | Gs], Elem, Index, PositionsElem):-
+	NewIndex is (Index + 1),
+	get_positions_grid_elem(Gs, Elem, NewIndex, PositionsElem).
 
-%Movimientos posibles dependiendo la posicion  
-move_1(Grid, NumOfColumns, Pos, RGrid).  %derecha
-move_2(). %abajo izq
-move_3(). %abajo 
-move_4(). %abajo derecha
+/* P1 se ubica a la izquierda */
+is_adyacent(P1, P2, NumOfColumns):-
+	P1 mod NumOfColumns =:= 0,
+	(P2 + 1) mod NumOfColumns =\= 0,
+	case_1(P1, P2, NumOfColumns),
+	!.
 
-% 3 Casos, posisiciones multiplos de 5, (posiciones + 1 multiplo) de 5, resto.
-case_1(Grid, NumOfColumns, Pos, RGrid):- %izquiera
-	Pos mod NumOfColumns =:= 0,
-	move_1(),
-	move_3(),
-	move_4().
+/* P1 se ubica a la derecha */
+is_adyacent(P1, P2, NumOfColumns):-
+	(P1 + 1) mod NumOfColumns =:= 0,
+	P2 mod NumOfColumns =\= 0,
+	(P2 - 1) =\= P1,
+	case_2(P1, P2, NumOfColumns),
+	!.
 
-case_2(Grid, NumOfColumns, Pos, RGrid):- % derecha
-	(Pos+1) mod NumOfColumns =:= 0,
-	move_2(),
-	move_3().
+/* P1 se ubica al centro */
+is_adyacent(P1, P2, NumOfColumns):-	
+	P1 mod NumOfColumns =\= 0,
+	(P1 + 1) mod NumOfColumns =\= 0,
+	case_3(P1, P2, NumOfColumns),
+	!.
 
-case_3(Grid, NumOfColumns, Pos, RGrid):- %centro
-	move_1(),
-	move_2(),
-	move_3(),
-	move_4().
+/* Si P1 se ubica a la izquierda */
+case_1(P1, P2, NumOfColumns):-
+	P2 =:= (P1 + 1);
+	P2 =:= (P1 + NumOfColumns);
+	P2 =:= (P1 + NumOfColumns + 1).
 
+/* Si P1 se ubica en la derecha */
+case_2(P1, P2, NumOfColumns):-
+	P2 =:= (P1 + NumOfColumns - 1);
+	P2 =:= (P1 + NumOfColumns).
 
-  
-
+/* Si P1 esta en el centro */
+case_3(P1, P2, NumOfColumns):-
+	P2 =:= (P1 + 1);
+	P2 =:= (P1 + NumOfColumns - 1);
+	P2 =:= (P1 + NumOfColumns);
+	P2 =:= (P1 + NumOfColumns + 1).	

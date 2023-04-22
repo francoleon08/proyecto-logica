@@ -54,7 +54,7 @@ function Game() {
     /*
     Build Prolog query, which will be like:
     join([
-          64,4,64,32,16,
+          64,4,64,32,16,let time = 700;
           64,8,16,2,32,
           2,4,64,64,2,
           2,4,32,16,4,
@@ -76,7 +76,7 @@ function Game() {
       if (success) {
         setScore(score + joinResult(path, grid, numOfColumns));
         setPath([]);
-        animateEffect(response['RGrids']);
+        animateEffect(response['RGrids'], 600);
         setValue(0);
       } else {
         setWaiting(false);
@@ -117,21 +117,29 @@ function Game() {
   /*
     Called when Booster Collapser is executed
    */
-    function onClickBooster() {
-      console.log(grid)
+    function onClickBooster() {      
+      const gridS = JSON.stringify(grid);
+      const queryS = "booster_colapser(" + gridS + "," + numOfColumns + ", RGrids)";    
+      pengine.query(queryS, (success, response) => {        
+        if (success) {          
+          animateEffect(response['RGrids'], 400);    
+        } else {
+          setWaiting(false);
+        }        
+      }); 
     }
 
   /**
    * Displays each grid of the sequence as the current grid in 1sec intervals.
    * @param {number[][]} rGrids a sequence of grids.
    */
-  function animateEffect(rGrids) {
+  function animateEffect(rGrids, time) {
     setGrid(rGrids[0]);
     const restRGrids = rGrids.slice(1);
     if (restRGrids.length > 0) {      
       setTimeout(() => {
-        animateEffect(restRGrids);
-      }, 700);
+        animateEffect(restRGrids, time);        
+      }, time);
     } else {
       setWaiting(false);
     }
