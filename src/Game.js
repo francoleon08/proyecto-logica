@@ -3,6 +3,8 @@ import PengineClient from './PengineClient';
 import Board from './Board';
 import { joinResult } from './util';
 import { numberToColor } from './util';
+import { uniqueSort } from 'jquery';
+import { within } from '@testing-library/react';
 
 let pengine;
 
@@ -15,6 +17,9 @@ function Game() {
   const [value, setValue] = useState(0);
   const [path, setPath] = useState([]);
   const [waiting, setWaiting] = useState(false);
+  const [display_game_over, setDisplayGameOver] = useState('none');
+  const [check_game_over, setControl] = useState(false);
+  setInterval(chekGameOver, 3000);
 
   useEffect(() => {
     // This is executed just once, after the first render.
@@ -76,7 +81,7 @@ function Game() {
       if (success) {
         setScore(score + joinResult(path, grid, numOfColumns));
         setPath([]);
-        animateEffect(response['RGrids'], 600);
+        animateEffect(response['RGrids'], 500);
         setValue(0);
       } else {
         setWaiting(false);
@@ -88,7 +93,7 @@ function Game() {
    * Show the intermediate result of a path
    */
   function setPathIntermediate(newPath) {
-    if(newPath.length > 1) {
+    if(newPath.length > 1 && !waiting) {
       let path = "[";
       for (let index = 0; index < newPath.length; index++) {
         
@@ -117,16 +122,20 @@ function Game() {
   /*
     Called when Booster Collapser is executed
    */
-    function onClickBooster() {      
-      const gridS = JSON.stringify(grid);
-      const queryS = "booster_colapser(" + gridS + "," + numOfColumns + ", RGrids)";    
-      pengine.query(queryS, (success, response) => {        
-        if (success) {          
-          animateEffect(response['RGrids'], 400);    
+    function onClickBooster() {     
+      if(!waiting){
+        const gridS = JSON.stringify(grid);
+        const queryS = "booster_colapser(" + gridS + "," + numOfColumns + ", RGrids)";    
+        pengine.query(queryS, (success, response) => {        
+        if (success) {                    
+          setWaiting(true);
+          animateEffect(response['RGrids'], 400);              
         } else {
           setWaiting(false);
         }        
       }); 
+      setWaiting(false);
+      }
     }
 
   /**
@@ -145,6 +154,29 @@ function Game() {
     }
   }
 
+  /**
+   * Called every 3 seconds, check game over 
+   */
+  function chekGameOver() {    
+    if(!check_game_over && grid !== null && !waiting) {
+      const gridS = JSON.stringify(grid);
+      const queryS = "booster_colapser(" + gridS + "," + numOfColumns + ", RGrids)";               
+      pengine.query(queryS, (success, response) => {        
+      if (!success) {            
+        setDisplayGameOver('block');
+        setControl(false)
+      }      
+      });
+    }
+  }
+
+  /** 
+   * Called to reload the page
+  */
+  function refreshPage() {
+    window.location.href = window.location.href;
+  }
+
 
   if (grid === null) {
     return null;
@@ -156,7 +188,7 @@ function Game() {
         <div className="score">{score}</div>
         <div 
           className="value" 
-          style={value === 0 ? undefined : { backgroundColor: numberToColor(value) }}
+          style={value === 0 ? undefined : { backgroundColor: numberToColor(value), display: "block" }}
         >
           {value}
         </div>
@@ -173,7 +205,17 @@ function Game() {
         onPathChange={onPathChange}
         onDone={onPathDone}
       />
+      <div 
+        className="game_over"
+        style={{display: display_game_over}}
+      >
+        <div className="background_game_over">
+          <span>Game Over - Puntaje: {score}</span>
+          <span className="refresh" onClick={refreshPage}>Click para recargar</span>
+        </div>
+      </div>
     </div>
+    
   );
 }
 

@@ -8,11 +8,10 @@
 :- use_module(library(random)).
 
 /**
- * top down - hablando en general y luego ir desglozando. 
- * Booster 
  * join(+Grid, +NumOfColumns, +Path, -RGrids) 
- * RGrids es la lista de grillas representando el efecto, en etapas, de combinar las celdas del camino Path
- * en la grilla Grid, con número de columnas NumOfColumns. El número 0 representa que la celda está vacía. 
+ * RGrids es la lista de grillas representando el efecto, en etapas, 
+ * de combinar las celdas del camino Pathen la grilla Grid, con número de columnas NumOfColumns. 
+ * El número 0 representa que la celda está vacía. 
  */ 
 join(Grid, NumOfColumns, Path, RGrids):-	
 	get_result_path(Grid, NumOfColumns, Path, R),
@@ -31,7 +30,7 @@ get_result_path(Grid, NumOfColumns, Path, Result):-
 
 /* Mediante un numero N computa la menor potencia de 2 mayor o igual a N */
 pow_two(N, Pow) :-
-	Pow is 2 ** ceiling(log(N) / log(2)).
+	Pow is 2 ** floor(log(N) / log(2)).
 
 /* Computa la suma de un Path dado */
 calculate_sum_path(_, _, [], 0).
@@ -56,33 +55,26 @@ search_num_on_grid([_ | Gs], Pos, N):-
 generate_power_two(Lower, Upper, RandomNumber) :-	
 	random_between(Lower, Upper, N), /* Genera un numero aleatorio entre [Lower, Upper] utilizando la libreria random */
 	RandomNumber is 2 ** N. 
-
 /* ---------------------------- */
 /* Se encarga de buscar la ultima posicion del camino y setear el resultado */
 set_path_grid(Grid, NumOfColumns, Path, Result, RGrid):-
-	last_position_path(Path, [X | Y]), /* Busco la ultima posicion para setear el resultado */
+	last(Path, [X | Y]), /* Busco la ultima posicion para setear el resultado */
 	function_position_grid(X, Y, NumOfColumns, PosSet), /* Funcion para calcular la posicion en la grilla */
 	set_result_path(PosSet, Grid, Result, RGrid). /* Setea el resultado del path en su posicion */
-
-/* Dado una lista, retorna el ultimo elemento */
-last_position_path([Ps], Ps).
-last_position_path([_ | Ps], Pos):-
-	last_position_path(Ps, Pos),
-	!.
 
 /* Mapea la posicion de un elemento en la grilla a su ubicacion en la Lista */
 function_position_grid(X, Y, Columns, N):-
 	N is (X*Columns + Y).
 
-/* Intercambia un elemento por un elemento E en una posicion P de una Lista  ====> ¡Refactorizar! */
+/* Intercambia un elemento por un elemento E en una posicion P de una Lista */
 set_result_path(P, Grid, E, RGrid) :-
-	swap_element_rec(P, Grid, E, RGrid, []).
+	swap_element_rec(P, Grid, E, RGrid).
 
-swap_element_rec(0, [_ | Gs], E, [E | Gs], _).
-swap_element_rec(P, [G | Gs], E, [G | Rs], S) :-
+swap_element_rec(0, [_ | Gs], E, [E | Gs]).
+swap_element_rec(P, [G | Gs], E, [G | Rs]) :-
 	P > 0,
 	Next is P - 1,
-	swap_element_rec(Next, Gs, E,Rs, [G | S]).
+	swap_element_rec(Next, Gs, E, Rs).
 
 /* ---------------------------- */
 /* Se encarga de poner en 0 los numeros correspondientes y reubicarlos*/
@@ -146,18 +138,18 @@ swap_zero_for_top(Grid, NumOfColumns, PosPath, RGrid):-
 */
 get_range(Grid, Low, High):-
 	max_number_grid(Grid, Max),
-	High is round(sqrt(Max)),
+	High is floor(log(Max)/log(2))-1,
 	get_range_low(High, Low),
 	!.
 
 /* 
-	Dado una potencia High retorna una potencia Low, formando un rango de potencias (N-6, N), siendo N>7.
-	Si N<7 retorna el rango (1, N).
+	Dado una potencia High retorna una potencia Low, formando un rango de potencias (N-8, N), siendo N>9.
+	Si N<9 retorna el rango (1, N).
 */
-get_range_low(_, 1).	
 get_range_low(High, Low):-
-	High > 7,
-	Low is (High-6).
+	High > 9,
+	Low is (High-8).
+get_range_low(_, 1).	
 
 /* Dado una grilla retorna el maximo numero perteneciente a la misma */
 max_number_grid([X], X).
@@ -191,10 +183,10 @@ booster_colapser(Grid, NumOfColumns, RGrids):-
 	last(RGrids_zeros, Grid_gravity_aux),
 	get_positions_zeros(Grid_gravity_aux, 0, Positions_Zeros),
 	set_gravity(Grid_gravity_aux, NumOfColumns, Positions_Zeros, Grid_Gravity),
-	generate_numbers_random(Grid_Gravity, 1, 10, Grid_Finish),
+	get_range(Grid, Low, High),
+	generate_numbers_random(Grid_Gravity, Low, High, Grid_Finish),
 	add_last(Grid_Gravity, RGrids_zeros, RGrids_aux),
-	add_last(Grid_Finish, RGrids_aux, RGrids),
-	!.
+	add_last(Grid_Finish, RGrids_aux, RGrids).
 
 /* Dado una grilla, retorna las posiciones donde hay ceros */
 get_positions_zeros([], _, []).
