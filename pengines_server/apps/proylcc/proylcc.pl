@@ -326,7 +326,7 @@ get_positions_grid_elem([_ | Gs], Elem, Index, PositionsElem):-
 /* Si la posicion P1 se ubica a la izquierda */
 is_adyacent(P1, P2, NumOfColumns):-
 	P1 mod NumOfColumns =:= 0,
-	(P2 + 1) mod NumOfColumns =\= 0,
+	%(P2 + 1) mod NumOfColumns =\= 0,
 	case_1(P1, P2, NumOfColumns),
 	!.
 
@@ -348,17 +348,26 @@ is_adyacent(P1, P2, NumOfColumns):-
 /* CASOS PARA CADA POSCION DE LA GRILLA */
 /* Si la posicion P1 se ubica a la izquierda */
 case_1(P1, P2, NumOfColumns):-
+	P2 =:= (P1 - NumOfColumns);
+	P2 =:= (P1 - NumOfColumns + 1);
 	P2 =:= (P1 + 1);
 	P2 =:= (P1 + NumOfColumns);
 	P2 =:= (P1 + NumOfColumns + 1).
 
 /* Si la posicion P1 se ubica en la derecha */
 case_2(P1, P2, NumOfColumns):-
+	P2 =:= (P1 - 1);
+	P2 =:= (P1 - NumOfColumns);
+	P2 =:= (P1 - NumOfColumns - 1);
 	P2 =:= (P1 + NumOfColumns - 1);
 	P2 =:= (P1 + NumOfColumns).
 
 /* Si la posicion P1 esta en el centro */
 case_3(P1, P2, NumOfColumns):-
+	P2 =:= (P1 - NumOfColumns - 1);
+	P2 =:= (P1 - NumOfColumns);
+	P2 =:= (P1 - NumOfColumns + 1);
+	P2 =:= (P1 - 1);
 	P2 =:= (P1 + 1);
 	P2 =:= (P1 + NumOfColumns - 1);
 	P2 =:= (P1 + NumOfColumns);
@@ -382,3 +391,131 @@ swap(List, Pos1, Pos2, Result) :-
 	nth0(Pos2, Temp1, Elem2, Temp2),
 	nth0(Pos1, Temp2, Elem2, Temp3),
 	nth0(Pos2, Temp3, Elem1, Result).
+
+/* ETAPA 2 */
+%movilidad_maxima(Grid, NumOfColumns, Path).
+
+aux(Grid, NumOfColumns, MaxPath, ResultMaxPath):-
+	buscar_caminos(Grid, Grid, NumOfColumns, 0, AllPaths),
+	refactor_paths(AllPaths, RefactorPaths),
+	positions_to_coordinate(RefactorPaths, NumOfColumns, Paths),
+	max_path(Grid, NumOfColumns, Paths, 0, MaxPath),
+	get_result_path(Grid, NumOfColumns, MaxPath, ResultMaxPath).
+
+max_path(_, _, [], _, _).
+max_path(Grid, NumOfColumns, [MaxPath | Ps], MaxResult, NewPath):-
+	get_result_path(Grid, NumOfColumns, MaxPath, Result),
+	MaxResult < Result,
+	max_path(Grid, NumOfColumns, Ps, Result, NewPath),
+	NewPath = MaxPath,
+	!.
+max_path(Grid, NumOfColumns, [_ | Ps], MaxResult, MaxPath):-
+	max_path(Grid, NumOfColumns, Ps, MaxResult, MaxPath).
+
+/**  
+ * Dado una lista de posiciones, transforma las mismas a coordenadas
+*/
+positions_to_coordinate([], _, []).
+positions_to_coordinate([P | Ps], NumOfColumns, [C | Cs]):-
+	path_to_coordinate(P, NumOfColumns, C),
+	positions_to_coordinate(Ps, NumOfColumns, Cs).
+
+path_to_coordinate([], _, []).
+path_to_coordinate([P | Ps], NumOfColumns, [C | Cs]):-
+	get_coordinate(P, NumOfColumns, C),
+	path_to_coordinate(Ps, NumOfColumns, Cs).
+
+/**  
+ * Dado una posicion P y el numero de columnas de la grilla, computa su posiciones [X,Y].
+*/
+get_coordinate(P, NumOfColumns, [X, Y]):-
+	X is (floor(P / NumOfColumns)),
+	Y is (P mod NumOfColumns).
+
+/**  
+ * Construye todos los caminos existentes dentro de la grilla.
+*/
+buscar_caminos(_, [], _, _, []).
+buscar_caminos(Grid, [G | Gs], NumOfColumns, Index, [P | Ps]):-
+	positions_adyacentes(Index, NumOfColumns, PositionsAdyacents),		
+	create_path(Grid, NumOfColumns, G, PositionsAdyacents, [Index], [Index], P),
+	length(P, SizePath),
+	SizePath > 1,
+	NewIndex is (Index + 1),
+	buscar_caminos(Grid, Gs, NumOfColumns, NewIndex, Ps),
+	!.
+buscar_caminos(Grid, [_ | Gs], NumOfColumns, Index, Paths):-
+	NewIndex is (Index + 1),
+	buscar_caminos(Grid, Gs, NumOfColumns, NewIndex, Paths).
+
+
+
+/**  
+ * A lista de adyacentes
+ * V lista de visitados
+ * P camino
+*/
+create_path(_, _, _, [], _, Path, Path).
+create_path(Grid, NumOfColumns, E, [A | As], Visited, Path, PathFinish):-
+	length(Path, SizePath),
+	SizePath =:= 1,
+	not(member(A,Visited)), /* Si no visite la posicion */	
+	nth0(A, Grid, Elem), /* Elemento en la posicion A de la grilla */
+	Elem =:= E,
+	append([A], Visited, Vs), /* Marco como visitada */
+	append(Path, [A], PathResult), /* Agrego la posicion al camino */
+	positions_adyacentes(A, NumOfColumns, PositionsAdyacents),
+	create_path_adyacent(Grid, NumOfColumns, Elem, PositionsAdyacents, Vs, PathResult, PathResultAux),
+	create_path(Grid, NumOfColumns, E, As, Vs, PathResultAux, PathFinish),
+	!.
+create_path(Grid, NumOfColumns, E, [A | As], Visited, Path, PathFinish):-
+	length(Path, SizePath),
+	SizePath > 1,
+	not(member(A,Visited)), /* Si no visite la posicion */	
+	nth0(A, Grid, Elem), /* Elemento en la posicion A de la grilla */
+	(Elem =:= E ; Elem =:= E*2),
+	append([A], Visited, Vs), /* Marco como visitada */
+	append(Path, [A], PathResult), /* Agrego la posicion al camino */
+	positions_adyacentes(A, NumOfColumns, PositionsAdyacents),
+	create_path_adyacent(Grid, NumOfColumns, Elem, PositionsAdyacents, Vs, PathResult, PathResultAux),
+	create_path(Grid, NumOfColumns, E, As, Vs, PathResultAux, PathFinish),
+	!.
+create_path(Grid, NumOfColumns, E, [_ | As], Visited, Path, PathResult):-
+	create_path(Grid, NumOfColumns, E, As, Visited, Path, PathResult).
+
+create_path_adyacent(Grid, NumOfColumns, E, [A | As], Visited, Path, Paths):-
+	create_path(Grid, NumOfColumns, E, [A | As], Visited, Path, Paths).
+
+/**  
+ * Dado una posicion, retorna las posiciones adyacentes a la misma.
+*/
+positions_adyacentes(Pos, NumOfColumns, Positions):-
+	P1 is Pos - NumOfColumns - 1,
+	P2 is Pos - NumOfColumns,
+	P3 is Pos - NumOfColumns + 1,
+	P4 is Pos - 1,
+	P5 is Pos + 1,
+	P6 is Pos + NumOfColumns - 1,
+	P7 is Pos + NumOfColumns,
+	P8 is Pos + NumOfColumns + 1,
+	check_positions([P1, P2, P3, P4, P5, P6, P7, P8], Pos, NumOfColumns, Positions).
+
+/**  
+ * Dado una lista de posiciones, elimina aquellas que no sean adyacentes a Pos o aquellas que no sean > 0.
+*/	
+check_positions([], _, _, []).
+check_positions([X | Xs], Pos, NumOfColumns, [X | Ps]):-
+	X >= 0,
+	is_adyacent(Pos, X, NumOfColumns),
+	check_positions(Xs, Pos, NumOfColumns, Ps),
+	!.
+check_positions([_ | Xs], Pos, NumOfColumns, Ps):-
+	check_positions(Xs, Pos, NumOfColumns, Ps).
+
+/**  
+ * Elimina las posiciones repetidas de cada camino.
+*/
+refactor_paths([], []).
+refactor_paths([P | Ps], [R | Rs]):-
+	list_to_set(P, R),
+	refactor_paths(Ps, Rs).	

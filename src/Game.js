@@ -122,21 +122,33 @@ function Game() {
   /*
     Called when Booster Collapser is executed
    */
-    function onClickBooster() {     
-      if(!waiting){
-        const gridS = JSON.stringify(grid);
-        const queryS = "booster_colapser(" + gridS + "," + numOfColumns + ", RGrids)";    
-        pengine.query(queryS, (success, response) => {        
-        if (success) {                    
-          setWaiting(true);
-          animateEffect(response['RGrids'], 400);              
-        } else {
-          setWaiting(false);
-        }        
-      }); 
-      setWaiting(false);
-      }
+  function onClickBooster() {     
+    if(!waiting){
+      const gridS = JSON.stringify(grid);
+      const queryS = "booster_colapser(" + gridS + "," + numOfColumns + ", RGrids)";    
+      pengine.query(queryS, (success, response) => {        
+      if (success) {                    
+        setWaiting(true);
+        animateEffect(response['RGrids'], 400);              
+      } else {
+        setWaiting(false);
+      }        
+    }); 
+    setWaiting(false);
     }
+  }
+  
+  function onClickAyuda() {
+    const gridS = JSON.stringify(grid);
+    const queryS = "aux(" + gridS + "," + numOfColumns + ", Path" + ", Result)";               
+    pengine.query(queryS, (success, response) => {        
+    if (success) {            
+      /* console.log(response['List']); */
+      setPath(response['Path']);
+      setValue(response['Result']);
+    }      
+    });
+  }
 
   /**
    * Displays each grid of the sequence as the current grid in 1sec intervals.
@@ -196,6 +208,11 @@ function Game() {
           className="booster" 
           onClick={onClickBooster}
         >Booster Colapser
+        </div>
+        <div 
+          className="booster" 
+          onClick={onClickAyuda}
+        >Ayuda
         </div>
       </div>
       <Board
