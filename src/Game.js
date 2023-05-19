@@ -81,7 +81,7 @@ function Game() {
       if (success) {
         setScore(score + joinResult(path, grid, numOfColumns));
         setPath([]);
-        animateEffect(response['RGrids'], 500);
+        animateEffect(response['RGrids'], 300);
         setValue(0);
       } else {
         setWaiting(false);
@@ -129,7 +129,7 @@ function Game() {
       pengine.query(queryS, (success, response) => {        
       if (success) {                    
         setWaiting(true);
-        animateEffect(response['RGrids'], 400);              
+        animateEffect(response['RGrids'], 200);              
       } else {
         setWaiting(false);
       }        
@@ -138,12 +138,11 @@ function Game() {
     }
   }
   
-  function onClickAyuda() {
+  function onClickBestMove() {
     const gridS = JSON.stringify(grid);
-    const queryS = "aux(" + gridS + "," + numOfColumns + ", Path" + ", Result)";               
+    const queryS = "best_move(" + gridS + "," + numOfColumns + ", Path" + ", Result)";               
     pengine.query(queryS, (success, response) => {        
-    if (success) {            
-      /* console.log(response['List']); */
+    if (success) {                  
       setPath(response['Path']);
       setValue(response['Result']);
     }      
@@ -211,7 +210,7 @@ function Game() {
         </div>
         <div 
           className="booster" 
-          onClick={onClickAyuda}
+          onClick={onClickBestMove}
         >Ayuda
         </div>
       </div>

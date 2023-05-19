@@ -392,62 +392,34 @@ swap(List, Pos1, Pos2, Result) :-
 	nth0(Pos1, Temp2, Elem2, Temp3),
 	nth0(Pos2, Temp3, Elem1, Result).
 
-/* ETAPA 2 */
-%movilidad_maxima(Grid, NumOfColumns, Path).
-
-aux(Grid, NumOfColumns, MaxPath, ResultMaxPath):-
-	buscar_caminos(Grid, Grid, NumOfColumns, 0, AllPaths),
-	refactor_paths(AllPaths, RefactorPaths),
-	positions_to_coordinate(RefactorPaths, NumOfColumns, Paths),
+/* ------------------ ETAPA 2 -------------------- */
+/**
+ * Dado una grilla con su numero de columnas, busca y retorna el mejor camino y el resultado de su sumatoria.
+*/
+best_move(Grid, NumOfColumns, MaxPath, ResultMaxPath):-
+	buscar_caminos(Grid, Grid, NumOfColumns, 0, _, Ls),
+	length(Ls, Length),
+	Length > 0,
+	transform_list(Ls, L),
+	positions_to_coordinate(L, NumOfColumns, Paths),
 	max_path(Grid, NumOfColumns, Paths, 0, MaxPath),
 	get_result_path(Grid, NumOfColumns, MaxPath, ResultMaxPath).
-
-max_path(_, _, [], _, _).
-max_path(Grid, NumOfColumns, [MaxPath | Ps], MaxResult, NewPath):-
-	get_result_path(Grid, NumOfColumns, MaxPath, Result),
-	MaxResult < Result,
-	max_path(Grid, NumOfColumns, Ps, Result, NewPath),
-	NewPath = MaxPath,
-	!.
-max_path(Grid, NumOfColumns, [_ | Ps], MaxResult, MaxPath):-
-	max_path(Grid, NumOfColumns, Ps, MaxResult, MaxPath).
-
-/**  
- * Dado una lista de posiciones, transforma las mismas a coordenadas
-*/
-positions_to_coordinate([], _, []).
-positions_to_coordinate([P | Ps], NumOfColumns, [C | Cs]):-
-	path_to_coordinate(P, NumOfColumns, C),
-	positions_to_coordinate(Ps, NumOfColumns, Cs).
-
-path_to_coordinate([], _, []).
-path_to_coordinate([P | Ps], NumOfColumns, [C | Cs]):-
-	get_coordinate(P, NumOfColumns, C),
-	path_to_coordinate(Ps, NumOfColumns, Cs).
-
-/**  
- * Dado una posicion P y el numero de columnas de la grilla, computa su posiciones [X,Y].
-*/
-get_coordinate(P, NumOfColumns, [X, Y]):-
-	X is (floor(P / NumOfColumns)),
-	Y is (P mod NumOfColumns).
 
 /**  
  * Construye todos los caminos existentes dentro de la grilla.
 */
-buscar_caminos(_, [], _, _, []).
-buscar_caminos(Grid, [G | Gs], NumOfColumns, Index, [P | Ps]):-
+buscar_caminos(_, [], _, _, [], []).
+buscar_caminos(Grid, [G | Gs], NumOfColumns, Index, [P | Ps], [PathFinish | Next]):-
 	positions_adyacentes(Index, NumOfColumns, PositionsAdyacents),		
-	create_path(Grid, NumOfColumns, G, PositionsAdyacents, [Index], [Index], P),
+	create_path(Grid, NumOfColumns, G, PositionsAdyacents, [Index], [Index], P, PathFinish),
 	length(P, SizePath),
 	SizePath > 1,
 	NewIndex is (Index + 1),
-	buscar_caminos(Grid, Gs, NumOfColumns, NewIndex, Ps),
+	buscar_caminos(Grid, Gs, NumOfColumns, NewIndex, Ps, Next),
 	!.
-buscar_caminos(Grid, [_ | Gs], NumOfColumns, Index, Paths):-
+buscar_caminos(Grid, [_ | Gs], NumOfColumns, Index, Paths, L):-
 	NewIndex is (Index + 1),
-	buscar_caminos(Grid, Gs, NumOfColumns, NewIndex, Paths).
-
+	buscar_caminos(Grid, Gs, NumOfColumns, NewIndex, Paths, L).
 
 
 /**  
@@ -455,8 +427,8 @@ buscar_caminos(Grid, [_ | Gs], NumOfColumns, Index, Paths):-
  * V lista de visitados
  * P camino
 */
-create_path(_, _, _, [], _, Path, Path).
-create_path(Grid, NumOfColumns, E, [A | As], Visited, Path, PathFinish):-
+create_path(_, _, _, [], _, Path, Path, [Path | _]).
+create_path(Grid, NumOfColumns, E, [A | As], Visited, Path, PathFinish, [PathFinish | Next]):-
 	length(Path, SizePath),
 	SizePath =:= 1,
 	not(member(A,Visited)), /* Si no visite la posicion */	
@@ -465,10 +437,10 @@ create_path(Grid, NumOfColumns, E, [A | As], Visited, Path, PathFinish):-
 	append([A], Visited, Vs), /* Marco como visitada */
 	append(Path, [A], PathResult), /* Agrego la posicion al camino */
 	positions_adyacentes(A, NumOfColumns, PositionsAdyacents),
-	create_path_adyacent(Grid, NumOfColumns, Elem, PositionsAdyacents, Vs, PathResult, PathResultAux),
-	create_path(Grid, NumOfColumns, E, As, Vs, PathResultAux, PathFinish),
+	create_path_adyacent(Grid, NumOfColumns, Elem, PositionsAdyacents, Vs, PathResult, PathResultAux, Next),
+	create_path(Grid, NumOfColumns, E, As, Vs, PathResultAux, PathFinish, Next),
 	!.
-create_path(Grid, NumOfColumns, E, [A | As], Visited, Path, PathFinish):-
+create_path(Grid, NumOfColumns, E, [A | As], Visited, Path, PathFinish, [PathFinish | Next]):-
 	length(Path, SizePath),
 	SizePath > 1,
 	not(member(A,Visited)), /* Si no visite la posicion */	
@@ -477,14 +449,14 @@ create_path(Grid, NumOfColumns, E, [A | As], Visited, Path, PathFinish):-
 	append([A], Visited, Vs), /* Marco como visitada */
 	append(Path, [A], PathResult), /* Agrego la posicion al camino */
 	positions_adyacentes(A, NumOfColumns, PositionsAdyacents),
-	create_path_adyacent(Grid, NumOfColumns, Elem, PositionsAdyacents, Vs, PathResult, PathResultAux),
-	create_path(Grid, NumOfColumns, E, As, Vs, PathResultAux, PathFinish),
+	create_path_adyacent(Grid, NumOfColumns, Elem, PositionsAdyacents, Vs, PathResult, PathResultAux, Next),
+	create_path(Grid, NumOfColumns, E, As, Vs, PathResultAux, PathFinish, Next),
 	!.
-create_path(Grid, NumOfColumns, E, [_ | As], Visited, Path, PathResult):-
-	create_path(Grid, NumOfColumns, E, As, Visited, Path, PathResult).
+create_path(Grid, NumOfColumns, E, [_ | As], Visited, Path, PathResult, ListPaths):-
+	create_path(Grid, NumOfColumns, E, As, Visited, Path, PathResult, ListPaths).
 
-create_path_adyacent(Grid, NumOfColumns, E, [A | As], Visited, Path, Paths):-
-	create_path(Grid, NumOfColumns, E, [A | As], Visited, Path, Paths).
+create_path_adyacent(Grid, NumOfColumns, E, [A | As], Visited, Path, Paths, ListPaths):-
+	create_path(Grid, NumOfColumns, E, [A | As], Visited, Path, Paths, ListPaths).
 
 /**  
  * Dado una posicion, retorna las posiciones adyacentes a la misma.
@@ -513,9 +485,41 @@ check_positions([_ | Xs], Pos, NumOfColumns, Ps):-
 	check_positions(Xs, Pos, NumOfColumns, Ps).
 
 /**  
- * Elimina las posiciones repetidas de cada camino.
+ * Dado una lista de listas de listas, retorna un Lista con la primera lista de cada una de las sublistas.
 */
-refactor_paths([], []).
-refactor_paths([P | Ps], [R | Rs]):-
-	list_to_set(P, R),
-	refactor_paths(Ps, Rs).	
+transform_list([], []).
+transform_list([[P | _] | Ps], [P | Rs]):-
+	transform_list(Ps, Rs).
+
+/**  
+ * Dado una lista de posiciones en lista, transforma las mismas a coordenadas [X,Y].
+*/
+positions_to_coordinate([], _, []).
+positions_to_coordinate([P | Ps], NumOfColumns, [C | Cs]):-
+	path_to_coordinate(P, NumOfColumns, C),
+	positions_to_coordinate(Ps, NumOfColumns, Cs).
+
+path_to_coordinate([], _, []).
+path_to_coordinate([P | Ps], NumOfColumns, [C | Cs]):-
+	get_coordinate(P, NumOfColumns, C),
+	path_to_coordinate(Ps, NumOfColumns, Cs).
+
+/**  
+ * Dado una posicion P y el numero de columnas de la grilla, computa su posiciones [X,Y].
+*/
+get_coordinate(P, NumOfColumns, [X, Y]):-
+	X is (floor(P / NumOfColumns)),
+	Y is (P mod NumOfColumns).
+
+/**  
+ * Dado una lista de caminos, retorna el camino con mayor Sumatoria.
+*/
+max_path(_, _, [], _, _).
+max_path(Grid, NumOfColumns, [MaxPath | Ps], MaxResult, NewPath):-
+	get_result_path(Grid, NumOfColumns, MaxPath, Result),
+	MaxResult < Result,
+	max_path(Grid, NumOfColumns, Ps, Result, NewPath),
+	NewPath = MaxPath,
+	!.
+max_path(Grid, NumOfColumns, [_ | Ps], MaxResult, MaxPath):-
+	max_path(Grid, NumOfColumns, Ps, MaxResult, MaxPath).
