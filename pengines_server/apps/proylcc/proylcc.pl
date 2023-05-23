@@ -19,7 +19,7 @@ join(Grid, NumOfColumns, Path, RGrids):-
 	set_zero_grid(Path, NumOfColumns, RGridResult, RGrid, RGridGravity),
 	get_range(Grid, Low, High),
 	generate_numbers_random(RGridGravity, Low, High, RGridFinish),
-	RGrids = [Grid, RGridResult, RGrid, RGridGravity, RGridFinish].
+	RGrids = [RGridResult, RGrid, RGridGravity, RGridFinish].
 
 /* ------------------OPERACIONES------------------ */
 
@@ -30,7 +30,7 @@ get_result_path(Grid, NumOfColumns, Path, Result):-
 
 /* Mediante un numero N computa la menor potencia de 2 mayor o igual a N */
 pow_two(N, Pow) :-
-	Pow is 2 ** floor(log(N) / log(2)).
+	Pow is 2 ** ceiling(log(N) / log(2)).
 
 /* Computa la suma de un Path dado */
 calculate_sum_path(_, _, [], 0).
@@ -136,20 +136,26 @@ swap_zero_for_top(Grid, NumOfColumns, PosPath, RGrid):-
 	Dado una grilla, busca el maximo numero y retorna las potencias para generar numeros random 
 	Low y High hacen referencia a un rango de potencias y no a la minima y maxima de la grilla.
 */
-get_range(Grid, Low, High):-
+get_range(Grid, Low, NewHigh):-
 	max_number_grid(Grid, Max),
 	High is floor(log(Max)/log(2))-1,
-	get_range_low(High, Low),
+	get_range_low(High, NewHigh, Low),
 	!.
 
 /* 
 	Dado una potencia High retorna una potencia Low, formando un rango de potencias (N-8, N), siendo N>9.
 	Si N<9 retorna el rango (1, N).
 */
-get_range_low(High, Low):-
-	High > 9,
-	Low is (High-8).
-get_range_low(_, 1).	
+get_range_low(High, 5, 2):-
+	High < 9.
+get_range_low(High, NewHigh, Low):-
+	High > 15,
+	NewHigh is (floor(High/2)),
+	Low is (ceiling(NewHigh/3)).
+
+get_range_low(High, NewHigh, Low):-
+	NewHigh is (floor(High/2)),
+	Low is (floor(NewHigh/4)).
 
 /* Dado una grilla retorna el maximo numero perteneciente a la misma */
 max_number_grid([X], X).
@@ -178,15 +184,16 @@ generate_numbers_random([G | Gs], Low, High, [G | Rs]):-
 booster_colapser(Grid, NumOfColumns, RGrids):-
 	get_grupos_elem_adyacents(Grid, NumOfColumns, Result),
 	get_paths(Result, RGrids_All_Paths),
-	concatenate_paths(RGrids_All_Paths, Pahts_concatenate),
+	concatenate_paths(RGrids_All_Paths, Pahts_concatenate_aux),
+	concatenate_paths(Pahts_concatenate_aux, Pahts_concatenate), /* Segundo llamado por si ocurrio un caso donde la transitividad entre caminos no logro darse */
 	set_paths_zero_result(Grid, NumOfColumns, Pahts_concatenate, RGrids_zeros),
 	last(RGrids_zeros, Grid_gravity_aux),
 	get_positions_zeros(Grid_gravity_aux, 0, Positions_Zeros),
 	set_gravity(Grid_gravity_aux, NumOfColumns, Positions_Zeros, Grid_Gravity),
 	get_range(Grid, Low, High),
 	generate_numbers_random(Grid_Gravity, Low, High, Grid_Finish),
-	add_last(Grid_Gravity, RGrids_zeros, RGrids_aux),
-	add_last(Grid_Finish, RGrids_aux, RGrids).
+	append(RGrids_zeros, [Grid_Gravity], RGrids_aux),
+	append(RGrids_aux, [Grid_Finish], RGrids).
 
 /* Dado una grilla, retorna las posiciones donde hay ceros */
 get_positions_zeros([], _, []).
@@ -316,7 +323,8 @@ get_groups(Pos, [_ | Ps], NumOfColumns, ListGroupAdyacents):-
 get_positions_grid_elem([], _, _, []).
 get_positions_grid_elem([Elem | Gs], Elem, Index, [Index | Ps]):-
 	NewIndex is (Index + 1),
-	get_positions_grid_elem(Gs, Elem, NewIndex, Ps).
+	get_positions_grid_elem(Gs, Elem, NewIndex, Ps),
+	!.
 get_positions_grid_elem([_ | Gs], Elem, Index, PositionsElem):-
 	NewIndex is (Index + 1),
 	get_positions_grid_elem(Gs, Elem, NewIndex, PositionsElem).
@@ -375,16 +383,6 @@ case_3(P1, P2, NumOfColumns):-
 
 /* ------------------ FIN BOOSTER COLAPSER ------------------ */
 
-/* -------------- OPERACIONES SOBRE LISTAS -------------- */
-/* Dado una lista L, agrega el elemento E al final de L */
-add_last(E ,L, R):-
-	concat(L, [E], R).
-
-/* Concatena dos listas */		
-concat([], Xs, Xs).
-concat([X | Xs], Ys, [X | Zs]):-
-	concat(Xs, Ys, Zs).
-
 /* Intercambia dos elementos en una lista */
 swap(List, Pos1, Pos2, Result) :-
 	nth0(Pos1, List, Elem1, Temp1),
@@ -396,30 +394,54 @@ swap(List, Pos1, Pos2, Result) :-
 /**
  * Dado una grilla con su numero de columnas, busca y retorna el mejor camino y el resultado de su sumatoria.
 */
-best_move(Grid, NumOfColumns, MaxPath, ResultMaxPath):-
-	buscar_caminos(Grid, Grid, NumOfColumns, 0, _, Ls),
-	length(Ls, Length),
+best_move(Grid, NumOfColumns, MaxPath, ResultMaxPath):-	
+	buscar_caminos(Grid, Grid, NumOfColumns, 0, Ls),
+	flatten_list(Ls, LSAux),
+	length(LSAux, Length),
 	Length > 0,
-	transform_list(Ls, L),
-	positions_to_coordinate(L, NumOfColumns, Paths),
+	positions_to_coordinate(LSAux, NumOfColumns, Paths),
 	max_path(Grid, NumOfColumns, Paths, 0, MaxPath),
 	get_result_path(Grid, NumOfColumns, MaxPath, ResultMaxPath).
 
 /**  
  * Construye todos los caminos existentes dentro de la grilla.
 */
-buscar_caminos(_, [], _, _, [], []).
-buscar_caminos(Grid, [G | Gs], NumOfColumns, Index, [P | Ps], [PathFinish | Next]):-
+buscar_caminos(_, [], _, _, []).
+buscar_caminos(Grid, [G | Gs], NumOfColumns, Index, [PathFinish | Next]):-
 	positions_adyacentes(Index, NumOfColumns, PositionsAdyacents),		
-	create_path(Grid, NumOfColumns, G, PositionsAdyacents, [Index], [Index], P, PathFinish),
-	length(P, SizePath),
-	SizePath > 1,
+	create_path(Grid, NumOfColumns, G, PositionsAdyacents, [Index], [Index], PathFinishAux),	
+	transform_list(PathFinishAux, PathFinish),
+	length(PathFinish, Length),
+	Length > 1,
 	NewIndex is (Index + 1),
-	buscar_caminos(Grid, Gs, NumOfColumns, NewIndex, Ps, Next),
+	buscar_caminos(Grid, Gs, NumOfColumns, NewIndex, Next),
 	!.
-buscar_caminos(Grid, [_ | Gs], NumOfColumns, Index, Paths, L):-
+buscar_caminos(Grid, [_| Gs], NumOfColumns, Index, Paths):-
 	NewIndex is (Index + 1),
-	buscar_caminos(Grid, Gs, NumOfColumns, NewIndex, Paths, L).
+	buscar_caminos(Grid, Gs, NumOfColumns, NewIndex, Paths).
+
+/**  
+ * Dado una lista de listas de listas, retorna un Lista con la primera lista de cada una de las sublistas.
+ * NO FUNCIONA, SE SALTA CAMINOS.
+ * EL ERROR DE LA BUSQUEDA DEL CAMINO ESTA ACA. EL CAMINO LO ENCUENTRA!
+*/
+transform_list([], []).
+transform_list([P | Ps], [T | Rss]):-
+	P = [T | Ts],
+	transform_list(T, Rs),
+	transform_list(Ts, Rss),
+	!.
+transform_list([P | Ps], [P | Rs]):-
+	transform_list(Ps, Rs).
+
+/**  
+ * Transforma una lista de listas de listas en una lista de listas.
+ * [ [[1,2][3,4]], [[5,6]] ] ==> [ [1,2], [3,4], [5,6] ].
+*/
+flatten_list([], []).
+flatten_list([P | Ps], FlatResult) :-
+    flatten_list(Ps, FlatP),
+    append(P, FlatP, FlatResult).
 
 
 /**  
@@ -427,8 +449,8 @@ buscar_caminos(Grid, [_ | Gs], NumOfColumns, Index, Paths, L):-
  * V lista de visitados
  * P camino
 */
-create_path(_, _, _, [], _, Path, Path, [Path | _]).
-create_path(Grid, NumOfColumns, E, [A | As], Visited, Path, PathFinish, [PathFinish | Next]):-
+create_path(_, _, _, [], _, Path, Path).
+create_path(Grid, NumOfColumns, E, [A | As], Visited, Path, PR):-
 	length(Path, SizePath),
 	SizePath =:= 1,
 	not(member(A,Visited)), /* Si no visite la posicion */	
@@ -437,10 +459,12 @@ create_path(Grid, NumOfColumns, E, [A | As], Visited, Path, PathFinish, [PathFin
 	append([A], Visited, Vs), /* Marco como visitada */
 	append(Path, [A], PathResult), /* Agrego la posicion al camino */
 	positions_adyacentes(A, NumOfColumns, PositionsAdyacents),
-	create_path_adyacent(Grid, NumOfColumns, Elem, PositionsAdyacents, Vs, PathResult, PathResultAux, Next),
-	create_path(Grid, NumOfColumns, E, As, Vs, PathResultAux, PathFinish, Next),
+	create_path_adyacent(Grid, NumOfColumns, Elem, PositionsAdyacents, Vs, PathResult, PR1),
+	create_path(Grid, NumOfColumns, E, As, Vs, PathResult,  PR2),
+	append([PathResult], [PR1], PRaux),
+	append([PRaux], [PR2], PR),
 	!.
-create_path(Grid, NumOfColumns, E, [A | As], Visited, Path, PathFinish, [PathFinish | Next]):-
+create_path(Grid, NumOfColumns, E, [A | As], Visited, Path, PR):-
 	length(Path, SizePath),
 	SizePath > 1,
 	not(member(A,Visited)), /* Si no visite la posicion */	
@@ -449,27 +473,29 @@ create_path(Grid, NumOfColumns, E, [A | As], Visited, Path, PathFinish, [PathFin
 	append([A], Visited, Vs), /* Marco como visitada */
 	append(Path, [A], PathResult), /* Agrego la posicion al camino */
 	positions_adyacentes(A, NumOfColumns, PositionsAdyacents),
-	create_path_adyacent(Grid, NumOfColumns, Elem, PositionsAdyacents, Vs, PathResult, PathResultAux, Next),
-	create_path(Grid, NumOfColumns, E, As, Vs, PathResultAux, PathFinish, Next),
+	create_path_adyacent(Grid, NumOfColumns, Elem, PositionsAdyacents, Vs, PathResult, PR1),
+	create_path(Grid, NumOfColumns, E, As, Vs, Path,  PR2),
+	append([PathResult], [PR1], PRaux),
+	append(PRaux, [PR2], PR),
 	!.
-create_path(Grid, NumOfColumns, E, [_ | As], Visited, Path, PathResult, ListPaths):-
-	create_path(Grid, NumOfColumns, E, As, Visited, Path, PathResult, ListPaths).
+create_path(Grid, NumOfColumns, E, [_ | As], Visited, Path, ListPaths):-
+	create_path(Grid, NumOfColumns, E, As, Visited, Path, ListPaths).
 
-create_path_adyacent(Grid, NumOfColumns, E, [A | As], Visited, Path, Paths, ListPaths):-
-	create_path(Grid, NumOfColumns, E, [A | As], Visited, Path, Paths, ListPaths).
+create_path_adyacent(Grid, NumOfColumns, E, [A | As], Visited, Path, ListPaths):-
+	create_path(Grid, NumOfColumns, E, [A | As], Visited, Path, ListPaths).
 
 /**  
  * Dado una posicion, retorna las posiciones adyacentes a la misma.
 */
 positions_adyacentes(Pos, NumOfColumns, Positions):-
-	P1 is Pos - NumOfColumns - 1,
-	P2 is Pos - NumOfColumns,
-	P3 is Pos - NumOfColumns + 1,
-	P4 is Pos - 1,
-	P5 is Pos + 1,
-	P6 is Pos + NumOfColumns - 1,
-	P7 is Pos + NumOfColumns,
-	P8 is Pos + NumOfColumns + 1,
+	P1 is Pos + NumOfColumns - 1,
+	P2 is Pos + NumOfColumns,
+	P3 is Pos + NumOfColumns + 1,
+	P4 is Pos + 1,
+	P5 is Pos - NumOfColumns + 1,
+	P6 is Pos - NumOfColumns,
+	P7 is Pos - NumOfColumns - 1,
+	P8 is Pos - 1,
 	check_positions([P1, P2, P3, P4, P5, P6, P7, P8], Pos, NumOfColumns, Positions).
 
 /**  
@@ -483,13 +509,6 @@ check_positions([X | Xs], Pos, NumOfColumns, [X | Ps]):-
 	!.
 check_positions([_ | Xs], Pos, NumOfColumns, Ps):-
 	check_positions(Xs, Pos, NumOfColumns, Ps).
-
-/**  
- * Dado una lista de listas de listas, retorna un Lista con la primera lista de cada una de las sublistas.
-*/
-transform_list([], []).
-transform_list([[P | _] | Ps], [P | Rs]):-
-	transform_list(Ps, Rs).
 
 /**  
  * Dado una lista de posiciones en lista, transforma las mismas a coordenadas [X,Y].
