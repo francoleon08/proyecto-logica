@@ -480,7 +480,7 @@ create_paths_aux(Grid, NumOfColumns, E, Elem, [A | As], Visited, Path, PRFinish)
 	append(Path, [Cordinate], PathResult), /* Agrego la posicion al camino */
 	positions_adyacentes(A, NumOfColumns, PositionsAdyacents),
 	create_path_adyacent(Grid, NumOfColumns, Elem, PositionsAdyacents, Vs, PathResult, PR1),
-	create_path(Grid, NumOfColumns, E, As, Vs, Path,  PR2),	
+	create_path(Grid, NumOfColumns, E, As, Visited, Path,  PR2),	
 	append([PathResult], PR1, PRaux),
 	append(PRaux, PR2, PRFinish),
 	!.
