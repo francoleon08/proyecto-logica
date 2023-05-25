@@ -5,6 +5,7 @@ import { joinResult } from './util';
 import { numberToColor } from './util';
 
 let pengine;
+let waiting = false;
 
 function Game() {
   
@@ -14,9 +15,8 @@ function Game() {
   const [score, setScore] = useState(0);
   const [value, setValue] = useState(0);
   const [path, setPath] = useState([]);
+  setInterval(chekGameOver, 2000);
   const [display_game_over, setDisplayGameOver] = useState('none');  
-  const [waiting, setWaiting] = useState(false);
-  /* setInterval(chekGameOver, 3000); */
 
   useEffect(() => {
     // This is executed just once, after the first render.
@@ -55,22 +55,24 @@ function Game() {
     if (!checkGrid() && waiting) {
       return;
     }
-    setWaiting(true);
-    const gridS = JSON.stringify(grid);
-    const pathS = JSON.stringify(path);
-    const queryS = "join(" + gridS + "," + numOfColumns + "," + pathS + ", RGrids)";        
-    pengine.query(queryS, (success, response) => {
-      if (success) {
-        setScore(score + joinResult(path, grid, numOfColumns));
-        setPath([]);
-        animateEffect(response['RGrids'], 300);
-        setValue(0);
-      }
-    });  
+    else {
+      waiting = true;
+      const gridS = JSON.stringify(grid);
+      const pathS = JSON.stringify(path);
+      const queryS = "join(" + gridS + "," + numOfColumns + "," + pathS + ", RGrids)";        
+      pengine.query(queryS, (success, response) => {
+        if (success) {
+          setScore(score + joinResult(path, grid, numOfColumns));
+          setPath([]);
+          animateEffect(response['RGrids'], 300);
+          setValue(0);
+        }
+      });  
+    }
   }
 
   /** 
-   * Create Path for pengines
+   * Create Path for pengines consult
   */
   function createPath(newPath) {
     let path = "[";
@@ -107,36 +109,43 @@ function Game() {
     }
   }
 
-  /*
+  /** *
     Called when Booster Collapser is executed
    */
   function onClickBooster() {       
     if (!checkGrid() && waiting) {
       return;
+    }
+    else {
+      waiting = true;
+      const gridS = JSON.stringify(grid);
+      const queryS = "booster_colapser(" + gridS + "," + numOfColumns + ", RGrids)";
+      pengine.query(queryS, (success, response) => {        
+        if (success) {   
+          setPath([]);
+          animateEffect(response['RGrids'], 200);        
+        }
+      });     
     }        
-    setWaiting(true);
-    const gridS = JSON.stringify(grid);
-    const queryS = "booster_colapser(" + gridS + "," + numOfColumns + ", RGrids)";
-    pengine.query(queryS, (success, response) => {        
-      if (success) {   
-        onPathChange([]);
-        animateEffect(response['RGrids'], 200);
-      }
-    });     
   }
 
+  /** *
+    Called when "Mejor Movimiento" is executed
+   */
   function onClickBestMove() {
-    if (!checkGrid()) {
+    if (!checkGrid() && waiting) {
       return;
     }
-    const gridS = JSON.stringify(grid);
-    const queryS = "best_move(" + gridS + "," + numOfColumns + ", Path, Result)";               
-    pengine.query(queryS, (success, response) => {        
-    if (success) {                  
-      setPath(response['Path']);
-      setValue(response['Result']);
-    }      
-    });
+    else {
+      const gridS = JSON.stringify(grid);
+      const queryS = "best_move(" + gridS + "," + numOfColumns + ", Path, Result)";           
+      pengine.query(queryS, (success, response) => {        
+      if (success) {                          
+        setPath(response['Path']);
+        setValue(response['Result']);
+      }      
+      });    
+    }
   }
 
   /**
@@ -152,7 +161,7 @@ function Game() {
       }, time);      
     }
     else {
-      setWaiting(false);
+      waiting = false;
     }
   }
 
@@ -160,16 +169,22 @@ function Game() {
    * Called every 3 seconds, check game over 
    */
   function chekGameOver() {   
-    if (!checkGrid() && waiting) {
+    if (waiting || !checkGrid() || grid === null || numOfColumns === null) {
       return;
     }     
-    const gridS = JSON.stringify(grid);
-    const queryS = "booster_colapser(" + gridS + "," + numOfColumns + ", RGrids)";               
-    pengine.query(queryS, (success, response) => {        
-    if (!success) {            
-      setDisplayGameOver('block');      
-    }      
-    });    
+    else {
+      const gridS = JSON.stringify(grid);
+      const queryS = "booster_colapser(" + gridS + "," + numOfColumns + ", _)";                     
+      pengine.query(queryS, (success) => {                      
+        if (!success) {     
+          waiting = true;        
+          setDisplayGameOver('block');      
+      }
+      else {
+        waiting = false;
+      }      
+      });    
+    }    
   }
 
   /** 
@@ -227,12 +242,14 @@ function Game() {
         <div 
           className="power-up" 
           onClick={onClickBooster}
+          style={waiting ? { backgroundColor: "#ED2B2A", border: "none", color: "white", textDecoration:"line-through 4px"} : undefined}
         >
           Booster Colapser
         </div>
         <div 
           className="power-up" 
           onClick={onClickBestMove}
+          style={waiting ? { backgroundColor: "#ED2B2A", border: "none", color: "white", textDecoration:"line-through 4px"} : undefined}
         >
           Mejor Movimiento
         </div>
