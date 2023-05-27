@@ -480,7 +480,7 @@ create_paths_aux(Grid, NumOfColumns, E, Elem, [A | As], Visited, Path, PRFinish)
 	append(Path, [Cordinate], PathResult), /* Agrego la posicion al camino */
 	positions_adyacentes(A, NumOfColumns, PositionsAdyacents),
 	create_path_adyacent(Grid, NumOfColumns, Elem, PositionsAdyacents, Vs, PathResult, PR1),
-	create_path(Grid, NumOfColumns, E, As, Vs, Path,  PR2),	
+	create_path(Grid, NumOfColumns, E, As, Visited, Path,  PR2),	
 	append([PathResult], PR1, PRaux),
 	append(PRaux, PR2, PRFinish),
 	!.
@@ -511,7 +511,6 @@ check_positions([X | Xs], Pos, NumOfColumns, [X | Ps]):-
 check_positions([_ | Xs], Pos, NumOfColumns, Ps):-
 	check_positions(Xs, Pos, NumOfColumns, Ps).
 
-
 /**  
  * Dado una lista de caminos, crea una lista con los caminos mayores a un resultado MaxResult.
  * El ultimo elemento de la lista es el camino con el mayor resultado.
@@ -526,3 +525,74 @@ max_path(Grid, NumOfColumns, [MaxPath | Ps], MaxResult, [MaxPath | NewPath]):-
 	!.
 max_path(Grid, NumOfColumns, [_ | Ps], MaxResult, MaxPath):-
 	max_path(Grid, NumOfColumns, Ps, MaxResult, MaxPath).
+
+best_move_adyacent(Grid, NumOfColumns, Path, Result):-
+	get_grid_falling(Grid, GridFalling),
+	find_paths(Grid, Grid, NumOfColumns, 0, AllPaths),
+	flatten_list(AllPaths, AllPathsFlatten),
+	find_path(Grid, NumOfColumns, GridFalling, AllPathsFlatten, Path, Result).
+
+
+/**  
+ * Dado una grilla Grid, retorna un grilla ordenada de forma descendente.
+*/
+get_grid_falling(Grid, GridResult):-
+	refactor_grid(Grid, 0, GridPositions),
+	sort(GridPositions, GridAux),
+	reverse(GridAux, GridResult).
+
+/**  
+ * Transforma una lista en una lista donde cada componente de la grilla es [E, p], 
+ * donde p es la posicion en la lista y E el elemento.
+*/
+refactor_grid([], _, []).
+refactor_grid([G | Gs], Index, [[G, Index] | Rs]):-
+	NewIndex is Index+1,
+	refactor_grid(Gs, NewIndex, Rs).	
+
+/**  
+ * Busca un camino adyacente a alguna de las posiciones maximas de la grilla.
+*/
+find_path(_, _, [], _, [], 0).
+find_path(Grid, NumOfColumns, [[E, P] | _], Paths, Path, E):-
+	find_paths_equals_result(Paths, Grid, NumOfColumns, E, PathsAdyacents),
+	find_path_adyacent(P, NumOfColumns, PathsAdyacents, Path),
+	length(Path, Length),
+	Length > 1,
+	!.
+find_path(Grid, NumOfColumns, [_ | GRs], Paths, Path, E):-
+	find_path(Grid, NumOfColumns, GRs, Paths, Path, E).
+
+/**  
+ * Dado una lista de caminos, retorna aquellos caminos que su resultado coincida
+ * con el recibido por parametro.
+*/
+find_paths_equals_result([], _, _, _, []).
+find_paths_equals_result([P | Ps], Grid, NumOfColumns, Result, [P | Rs]):-
+	length(P, Length),
+	Length > 1,
+	get_result_path(Grid, NumOfColumns, P, Result),
+	find_paths_equals_result(Ps, Grid, NumOfColumns, Result, Rs).
+find_paths_equals_result([_ | Ps], Grid, NumOfColumns, Result, Paths):-
+	find_paths_equals_result(Ps, Grid, NumOfColumns, Result, Paths).
+
+/**  
+ * Recorre la lista de caminos en busca de uno en la que su ultima posicion
+ * sea adyacente a la posicion del elemento en la grilla.
+*/
+find_path_adyacent(_, _, [], []).
+find_path_adyacent(Pos, NumOfColumns, [P | _], P):-	
+	equals_adyacent_position(Pos, NumOfColumns, P).
+find_path_adyacent(Pos, NumOfColumns, [_ | Ps], P):-
+	find_path_adyacent(Pos, NumOfColumns, Ps, P).
+
+/**  
+ * Dado una posicion y un camino, verifica si la posicion final del camino es adyacente a la posicion recibida,
+ * y que la posicion no pertenezca al camino.
+*/
+equals_adyacent_position(Pos, NumOfColumns, Path):-
+	last(Path, [X | Y]),
+	function_position_grid(X, Y, NumOfColumns, LastPosition),
+	is_adyacent(Pos, LastPosition, NumOfColumns),
+	get_coordinate(Pos, NumOfColumns, PosCoordinate),
+	not(member(PosCoordinate, Path)).

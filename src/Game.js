@@ -148,6 +148,24 @@ function Game() {
     }
   }
 
+  function onClickBestMoveAdyacent() {
+    if (!checkGrid() && waiting) {
+      return;
+    }
+    else {
+      const gridS = JSON.stringify(grid);
+      const queryS = "best_move_adyacent(" + gridS + "," + numOfColumns + ", Path, Result)";           
+      pengine.query(queryS, (success, response) => {        
+      if (success) {
+        setPath(response['Path']);
+        setValue(response['Result']);
+      }      
+      else {
+      }
+      });    
+    }
+  }
+
   /**
    * Displays each grid of the sequence as the current grid in 1sec intervals.
    * @param {number[][]} rGrids a sequence of grids.
@@ -252,6 +270,13 @@ function Game() {
           style={waiting ? { backgroundColor: "#ED2B2A", border: "none", color: "white", textDecoration:"line-through 4px"} : undefined}
         >
           Mejor Movimiento
+        </div>
+        <div 
+          className="power-up" 
+          onClick={onClickBestMoveAdyacent}
+          style={waiting ? { backgroundColor: "#ED2B2A", border: "none", color: "white", textDecoration:"line-through 4px"} : undefined}
+        >
+          Mejor Movimiento Adyacente
         </div>
       </div>
       <div 
