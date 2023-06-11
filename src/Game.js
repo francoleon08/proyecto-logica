@@ -15,7 +15,7 @@ function Game() {
   const [score, setScore] = useState(0);
   const [value, setValue] = useState(0);
   const [path, setPath] = useState([]);
-  setInterval(chekGameOver, 2000);
+  /* setInterval(chekGameOver, 2000); */ /* Sobrecarga el server */
   const [display_game_over, setDisplayGameOver] = useState('none');  
   const [display_movement, setDisplayMovement] = useState('none');  
 
