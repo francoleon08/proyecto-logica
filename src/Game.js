@@ -15,8 +15,9 @@ function Game() {
   const [score, setScore] = useState(0);
   const [value, setValue] = useState(0);
   const [path, setPath] = useState([]);
-  setInterval(chekGameOver, 2000);
+  /* setInterval(chekGameOver, 2000); */ /* Sobrecarga el server */
   const [display_game_over, setDisplayGameOver] = useState('none');  
+  const [display_movement, setDisplayMovement] = useState('none');  
 
   useEffect(() => {
     // This is executed just once, after the first render.
@@ -148,6 +149,27 @@ function Game() {
     }
   }
 
+  function onClickBestMoveAdyacent() {
+    if (!checkGrid() && waiting) {
+      return;
+    }
+    else {
+      const gridS = JSON.stringify(grid);
+      const queryS = "best_move_adyacent(" + gridS + "," + numOfColumns + ", Path, Result)";           
+      pengine.query(queryS, (success, response) => {        
+      if (success) {
+        setPath(response['Path']);
+        setValue(response['Result']);
+        if(response['Result'] === 0) {
+          setDisplayMovement('block');
+        }
+      }      
+      else {
+      }
+      });    
+    }
+  }
+
   /**
    * Displays each grid of the sequence as the current grid in 1sec intervals.
    * @param {number[][]} rGrids a sequence of grids.
@@ -206,6 +228,10 @@ function Game() {
     return state;
   }
 
+  function hideAlertMovement() {
+    setDisplayMovement('none');
+  }
+
 
   if (grid === null) {
     return null;
@@ -242,16 +268,26 @@ function Game() {
         <div 
           className="power-up" 
           onClick={onClickBooster}
-          style={waiting ? { backgroundColor: "#ED2B2A", border: "none", color: "white", textDecoration:"line-through 4px"} : undefined}
+          style={waiting ? { backgroundColor: "#ED2B2A", border: "none"} : undefined}
+          title="Colapsar bloques iguales"
         >
-          Booster Colapser
+          <i className='bx bxl-graphql bx-lg bx-tada'style={waiting ? { color: "white" } : { color: "red" }}></i>
         </div>
         <div 
           className="power-up" 
           onClick={onClickBestMove}
-          style={waiting ? { backgroundColor: "#ED2B2A", border: "none", color: "white", textDecoration:"line-through 4px"} : undefined}
+          style={waiting ? { backgroundColor: "#ED2B2A", border: "none"} : undefined}
+          title="Mejor movimiento"
         >
-          Mejor Movimiento
+          <i className='bx bx-bulb bx-lg bx-tada' style={waiting ? { color: "white" } : { color: "yellow" }}></i>
+        </div>
+        <div 
+          className="power-up" 
+          onClick={onClickBestMoveAdyacent}
+          style={waiting ? { backgroundColor: "#ED2B2A", border: "none"} : undefined}
+          title="Mejor movimiento adyacente al mayor bloque"
+        >
+          <i className='bx bx-qr bx-lg bx-tada' style={waiting ? { color: "white" } : { color: "blue" }}></i>
         </div>
       </div>
       <div 
@@ -261,6 +297,20 @@ function Game() {
         <div className="background_game_over">
           <span>Game Over - Puntaje: {score}</span>
           <span className="refresh" onClick={refreshPage}>Click para recargar</span>
+        </div>
+      </div>
+      <div 
+        className="best_move"
+        style={{display: display_movement}}
+      >
+        <div className="background_best_move">
+          <span>No existe un camino adyacente a algún bloque</span>
+          <span 
+            className='best_move_close'             
+            onClick={hideAlertMovement}
+            >
+              Cerrar
+          </span>
         </div>
       </div>
     </div>    
