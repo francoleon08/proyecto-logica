@@ -7,18 +7,17 @@ import { numberToColor } from './util';
 let pengine;
 let waiting = false;
 
-function Game() {
-  
-  // State
+function Game() {  
   const [grid, setGrid] = useState(null);
   const [numOfColumns, setNumOfColumns] = useState(null);
   const [score, setScore] = useState(0);
   const [value, setValue] = useState(0);
   const [path, setPath] = useState([]);
-  /* setInterval(chekGameOver, 2000); */ /* Sobrecarga el server */
   const [display_game_over, setDisplayGameOver] = useState('none');  
   const [display_movement, setDisplayMovement] = useState('none');  
-
+  const timeOnPath = 300;
+  const timeBooster = 200;
+  
   useEffect(() => {
     // This is executed just once, after the first render.
     PengineClient.init(onServerReady);
@@ -65,26 +64,15 @@ function Game() {
         if (success) {
           setScore(score + joinResult(path, grid, numOfColumns));
           setPath([]);
-          animateEffect(response['RGrids'], 300);
+          animateEffect(response['RGrids'], timeOnPath);
           setValue(0);
+          setTimeout(() => {            
+            const lastGrid = response['RGrids'][response['RGrids'].length - 1];
+            chekGameOver(lastGrid);
+          }, (timeOnPath * response['RGrids'].length + 1500));
         }
       });  
     }
-  }
-
-  /** 
-   * Create Path for pengines consult
-  */
-  function createPath(newPath) {
-    let path = "[";
-      for (let index = 0; index < newPath.length; index++) {
-        
-        path += "["+newPath[index]+"]";
-        if(index < newPath.length-1)
-          path += ",";
-      }
-      path += "]";
-      return path;
   }
 
   /**
@@ -95,7 +83,7 @@ function Game() {
       return;
     }
     if(newPath.length > 1) {
-      let path = createPath(newPath);      
+      const path = JSON.stringify(newPath); 
       const gridS = JSON.stringify(grid);
       const queryS = "get_result_path(" + gridS + "," + numOfColumns + "," + path + ", Result)";    
       pengine.query(queryS, (success, response) => {
@@ -124,13 +112,17 @@ function Game() {
       pengine.query(queryS, (success, response) => {        
         if (success) {   
           setPath([]);
-          animateEffect(response['RGrids'], 200);        
+          animateEffect(response['RGrids'], timeBooster);      
+          setTimeout(() => {            
+            const lastGrid = response['RGrids'][response['RGrids'].length - 1];
+            chekGameOver(lastGrid);
+          }, (timeBooster * response['RGrids'].length + 1500));
         }
       });     
     }        
   }
 
-  /** *
+  /**
     Called when "Mejor Movimiento" is executed
    */
   function onClickBestMove() {
@@ -149,6 +141,9 @@ function Game() {
     }
   }
 
+  /**
+   * Called when "Mejor Movimiento Adyacente" is executed
+  */
   function onClickBestMoveAdyacent() {
     if (!checkGrid() && waiting) {
       return;
@@ -188,25 +183,17 @@ function Game() {
   }
 
   /**
-   * Called every 3 seconds, check game over 
+   * Called after the execution of those functions that modify the grid
    */
-  function chekGameOver() {   
-    if (waiting || !checkGrid() || grid === null || numOfColumns === null) {
-      return;
-    }     
-    else {
-      const gridS = JSON.stringify(grid);
-      const queryS = "booster_colapser(" + gridS + "," + numOfColumns + ", _)";                     
-      pengine.query(queryS, (success) => {                      
-        if (!success) {     
-          waiting = true;        
-          setDisplayGameOver('block');      
-      }
-      else {
-        waiting = false;
-      }      
-      });    
-    }    
+  function chekGameOver(Grid) {       
+    const gridS = JSON.stringify(Grid);
+    const queryS = "booster_colapser(" + gridS + "," + numOfColumns + ", _)";                           
+    pengine.query(queryS, (success) => {                      
+      if (!success) {     
+        waiting = true;        
+        setDisplayGameOver('block');      
+    }   
+    }); 
   }
 
   /** 
@@ -228,6 +215,9 @@ function Game() {
     return state;
   }
 
+  /** 
+   * Hide notification of adjacent paths
+  */
   function hideAlertMovement() {
     setDisplayMovement('none');
   }
@@ -292,7 +282,7 @@ function Game() {
       </div>
       <div 
         className="game_over"
-        style={{display: display_game_over}}
+        style={{display: display_game_over}}        
       >
         <div className="background_game_over">
           <span>Game Over - Puntaje: {score}</span>
@@ -305,7 +295,7 @@ function Game() {
       >
         <div className="background_best_move">
           <span>No existe un camino adyacente a algún bloque</span>
-          <span 
+          <span             
             className='best_move_close'             
             onClick={hideAlertMovement}
             >
