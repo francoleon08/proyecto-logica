@@ -508,7 +508,7 @@ check_positions([_ | Xs], Pos, NumOfColumns, Ps):-
  * Dado una lista de caminos, crea una lista con los caminos mayores a un resultado MaxResult.
  * El ultimo elemento de la lista es el camino con el mayor resultado.
  * En el caso de que varios caminos computen el mismo resultado, elije el primero que encuentra.
- * Se realza de esta forma, porque el tiempo de ejecucion disminuye considerablemente.
+ * Se realiza de esta forma, porque el tiempo de ejecucion disminuye considerablemente.
 */
 max_path(_, _, [], _, []).
 max_path(Grid, NumOfColumns, [MaxPath | Ps], MaxResult, [MaxPath | NewPath]):-
@@ -519,6 +519,11 @@ max_path(Grid, NumOfColumns, [MaxPath | Ps], MaxResult, [MaxPath | NewPath]):-
 max_path(Grid, NumOfColumns, [_ | Ps], MaxResult, MaxPath):-
 	max_path(Grid, NumOfColumns, Ps, MaxResult, MaxPath).
 
+/**
+ * Dado una grilla con su numero de columnas, busca y retorna el mejor camino (y su resultado)
+ * adyacente al mayor bloque posible.
+ * En el caso de no existir un camino, retorna una lista vacia y 0.
+*/
 best_move_adyacent(Grid, NumOfColumns, Path, Result):-
 	get_grid_falling(Grid, GridFalling),
 	find_paths(Grid, Grid, NumOfColumns, 0, AllPaths),
